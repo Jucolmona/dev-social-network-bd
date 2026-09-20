@@ -2,15 +2,15 @@
 
 ## Version 1
 
-- USUARIO(id, nombre, apellido, username, email, contrasena, intentos_fallidos, tiempo_bloqueo)
-- SESIONES(id, usuario_id, fecha_inicio, activa)
-- PERFIL_USUARIO(id, id_usuario, fecha_creacion, nivel_completado, enlaces_externos, enlace_portafolio, habilidades, anios_experiencia, nivel)
+- USUARIO(id, nombre, apellido, username, email, fecha_registro)
+- CREDENCIAL(id, usuario_id, tipo, password_hash, proveedor_id_externo, intentos_fallidos, bloqueado_hasta)
+- PERFIL_USUARIO(id, id_usuario, fecha_creacion, bio, nivel_completado, enlaces_externos, enlace_portafolio, habilidades, anios_experiencia, nivel)
 - PROYECTO(id, usuario_id, titulo, descripcion, repositorioURL, fecha_creacion, ultima_actualizacion, tecnologias)
 - DISCUSIONES(id, usuario_id, titulo, tecnologia, contenido, fecha_creacion)
 
 ### Análisis de dependencias funcionales
 
-#### Usuarios
+#### USUARIO
 
 **id --> nombre:** un id de usuario no puede estar asociado a dos nombres diferentes
 **id --> apellido:** un id de usuario no puede estar asociado a dos nombres de usuario diferentes
@@ -26,26 +26,62 @@ Se deriva una dependencia funcional completa en la relacion usuarios
 (id, nombre, apellido) --> email
 (id, nombre, apellido) --> contrasena
 
-USUARIO(id, nombre, apellido, username, contrasena, email)
-CONTROL_SESION(id, intentos_fallidos, tiempo_bloqueo, id_usuario, id_sesion)
+USUARIO(id, nombre, apellido, username, email, fecha_registro)
+CONTROL_SESION(id, intentos_fallidos, tiempo_bloqueo, id_usuario)
 
 > Se retira de la relacion USUARIO , intentos_fallidos y tiempo_bloqueo, ya que no tienen una. relacion inherente con la clave primaria de usuario. Se pasan estos atributos a una nueva relacion de CONTROL_SESION. Ademas si se borra algun registro de control de sección, no se veria afectado alguna sección o algun usuario.
 
 #### PERFIL_USUARIO
 
-PERFIL_USUARIO(id, id_usuario, fecha_creacion, nivel_completado, enlaces_externos, enlace_portafolio, habilidades, anios_experiencia, nivel)
+PERFIL_USUARIO(id, id_usuario, fecha_creacion, nivel_completado, enlaces_externos, enlace_portafolio, habilidades, anio_inicio_dev, nivel)
 
 **id --> id_usuario:** un perfil de usuario solo puede tener un único usuario
 **id --> fecha_creacion:** el perfil de usuario solo puede ser creada en una unica fecha especifica.
-**id --> enlace_portafolio:** un perfil de usario solo tiene un enlace de portafolio
+**id --> nivel_completado:** el perfil de usuario puede tener un nivel de avance en su perfil en un momento determinado
+**id --> enlace_portafolio:** un perfil de usario solo tiene un enlace de portafolio especifico
+**id --> anio_inicio_dev:** un perfil de usuario tiene un inicio de experiencia en desarrollo
 
 
-**id --> nivel_completado:** un perfil de usuario puede tener varios niveles de completitud
-**id --> enlaces_externos:** un perfil de usuario puede tener varios enlaces externos
-**id --> habilidades:** un perfil de usuario puede tener varias habilidades
+PERFIL_USUARIO(id, id_usuario, fecha_creacion, bio, nivel_completado, enlace_portafolio, anio_inicio_dev, nivel)
+ENLACES_EXTERNOS(id, nombre_enlace, url_enlace, id_perfil)
+HABILIDADES(id, nombre_habilidad, id_perfil, id_tecnologia)
+
+#### PROYECTO
+
+PROYECTO(id, usuario_id, titulo, descripcion, repositorio_url, fecha_creacion, ultima_actualizacion, tecnologias)
+
+**id --> usuario_id:** un proyecto solo puede pertenecer a un usuario especifico
+**id --> titulo:** un proyecto solo pude tener un único título
+**id --> repositorio_url:** un proyecto solo puede tener un único repositorio alojado
+**id --> fecha_creacion:** un proyecto se crea en una fecha especifica
+**id --> ultima_actualizacion:** un proyecto puede ser actualizado en un momento determinado
+
+PROYECTO(id, usuario_id, titulo, descripcion, repositorio_url, fecha_creacion, ultima_actualizacion)
+TECNOLOGIAS(id, nombre_tecnologia)
+PROYECTO_TECNOLOGIAS(id_proyecto, id_tecnologia)
+
+#### DISCUSIONES
+
+DISCUSIONES(id, usuario_id, titulo, tecnologia, contenido, fecha_creacion)
+
+**id --> titulo:** una discusion puede tener un unico titulo
+**id --> autor:** una discusion solo puede tener un unico creador
+**id --> contenido:** una discusion solo puede tener un unico contenido
+**id --> fecha creacion:** una discusion solo se puede crear en una fecha especifica
+
+DISCUSIONES(id, titulo, autor_id, contenido, fecha_creacion, id_tecnologia)
+INTERACCION_DISCUSION(id, id_discusion, id_usuario, comentario)
+
 
 ## Version 2
 
-- USUARIO(id, nombre, apellido, username, contrasena, email)
-- CONTROL_SESION(id, intentos_fallidos, tiempo_bloqueo, id_usuario, id_sesion)
-- SESIONES(id, usuario_id, fecha_inicio, activa)
+- USUARIO(id, nombre, apellido, username, email, fecha_registro)
+- CREDENCIAL(id, usuario_id, tipo, password_hash, proveedor_id_externo, intentos_fallidos, bloqueado_hasta)
+- PERFIL_USUARIO(id, id_usuario, fecha_creacion, bio, nivel_completado, enlace_portafolio, anio_inicio_dev, nivel)
+- ENLACES_EXTERNOS(id, nombre_enlace, url_enlace, id_perfil)
+- HABILIDADES(id, nombre_habilidad, id_perfil, id_tecnologia)
+- PROYECTO(id, usuario_id, titulo, descripcion, repositorio_url, fecha_creacion, ultima_actualizacion)
+- TECNOLOGIAS(id, nombre_tecnologia)
+- PROYECTO_TECNOLOGIAS(id_proyecto, id_tecnologia)
+- DISCUSIONES(id, titulo, autor_id, contenido, fecha_creacion, id_tecnologia)
+- INTERACCION_DISCUSION(id, id_discusion, id_usuario, comentario)
