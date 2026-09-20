@@ -1,7 +1,9 @@
+-- Tabla de cradenciales para HU-002
+
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
-CREATE TABLE usuarios (
+CREATE TABLE credenciales (
     id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     correo              VARCHAR(150) NOT NULL UNIQUE,
     contrasena          VARCHAR(255) NOT NULL,
@@ -11,3 +13,9 @@ CREATE TABLE usuarios (
     fecha_creacion      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     fecha_actualizacion TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+/* Busquedas espacificas de HU-002 */
+--Busqueda credencial por correo
+SELECT id, correo, contrasena, intentos_fallidos, bloqueado_hasta
+FROM credenciales
+WHERE correo = :correo;
