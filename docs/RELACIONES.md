@@ -31,6 +31,21 @@ CONTROL_SESION(id, intentos_fallidos, tiempo_bloqueo, id_usuario)
 
 > Se retira de la relacion USUARIO , intentos_fallidos y tiempo_bloqueo, ya que no tienen una. relacion inherente con la clave primaria de usuario. Se pasan estos atributos a una nueva relacion de CONTROL_SESION. Ademas si se borra algun registro de control de sección, no se veria afectado alguna sección o algun usuario.
 
+#### CREDENCIAL
+
+CREDENCIAL(id, usuario_id, tipo, password_hash, proveedor_id_externo, intentos_fallidos, bloqueado_hasta)
+
+**id --> usuario_id:** una credencial solo puede pertenecer a un único usuario
+**id --> tipo:** una credencial tiene un único tipo de autenticación (LOCAL u OAUTH_*)
+**id --> password_hash:** una credencial solo puede tener un único hash de contraseña (aplica solo si el tipo es LOCAL)
+**id --> proveedor_id_externo:** una credencial solo puede tener un único identificador externo (aplica solo si el tipo es OAUTH_*)
+**id --> intentos_fallidos:** una credencial lleva un único conteo de intentos fallidos en un momento determinado
+**id --> bloqueado_hasta:** una credencial solo puede tener una única fecha/hora de desbloqueo vigente en un momento determinado
+
+CREDENCIAL(id, usuario_id, tipo, password_hash, proveedor_id_externo, intentos_fallidos, bloqueado_hasta)
+
+> A diferencia de la Versión 1, no se separa el control de intentos fallidos y bloqueo en una relación aparte (CONTROL_SESION), ya que estos atributos dependen directamente de la credencial de autenticación (no del usuario en sí): un usuario puede tener varias credenciales (por ejemplo, LOCAL y OAUTH_GOOGLE), y cada una debe controlar sus propios intentos fallidos y bloqueo de forma independiente. Por eso permanecen dentro de CREDENCIAL.
+
 #### PERFIL_USUARIO
 
 PERFIL_USUARIO(id, id_usuario, fecha_creacion, nivel_completado, enlaces_externos, enlace_portafolio, habilidades, anio_inicio_dev, nivel)
