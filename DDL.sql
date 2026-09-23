@@ -26,7 +26,7 @@ INSERT INTO usuarios (nombre, apellido, username, email)
 VALUES (:nombre, :apellido, :username, :email)
 RETURNING id;
 
--- Listar usuarios registrados por mes (pregunta clave del README)
+-- Listar usuarios registrados por mes 
 SELECT DATE_TRUNC('month', fecha_registro) AS mes, COUNT(*) AS total
 FROM usuarios
 GROUP BY mes
