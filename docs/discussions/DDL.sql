@@ -3,7 +3,7 @@
 CREATE TABLE discussions (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 
-    user_id BIGINT NOT NULL,
+    user_id UUID NOT NULL,
 
     technology_id BIGINT NOT NULL,
 
@@ -21,7 +21,7 @@ CREATE TABLE discussions (
 
     CONSTRAINT fk_discussion_user
         FOREIGN KEY (user_id)
-        REFERENCES users(id)
+        REFERENCES usuarios(id)
         ON DELETE RESTRICT,
 
     CONSTRAINT fk_discussion_technology
