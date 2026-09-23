@@ -2,6 +2,13 @@
 
 Repositorio para base de datos para proyecto de fábrica escuela de Red Social para desarrolladores.
 
+## Integrantes
+- Juan Esteban Tobón Martínez.
+- Juan Camilo Mona Lujan.
+- Valentina Garro Ramírez.
+- Laura Katherine Henao Areiza.
+- Edgar Andrés Garzón Marín.
+
 ## Objetivo general
 
 Desarrollar una red social orientada a desarrolladores donde puedan compartir proyectos, discutir tecnologías y encontrar colaboradores.
