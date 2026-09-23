@@ -1,4 +1,25 @@
-# Modelo de Base de Datos   
+# dev-social-network-bd
+
+Repositorio para base de datos para proyecto de fábrica escuela de Red Social para desarrolladores.
+
+## Objetivo general
+
+Desarrollar una red social orientada a desarrolladores donde puedan compartir proyectos, discutir tecnologías y encontrar colaboradores.
+
+## Objetivos específicos
+
+- Permitir el registro y el inicio de sesión de usuarios en la red social
+- Creación de perfiles técnicos
+- Publicación de proyectos y repositorios de código con las demás comunidades de software
+- Creación de discusiones sobre tecnologías y herramientas
+- Creación de un sistema de comentarios e interacción entre usuarios
+- Permitir la comunicación a través de mensajería instantánea entre los miembros de la comunidad
+- Generación de reportes sobre la actividad y crecimiento de la comunidad
+
+---
+
+# Modelo de Base de Datos
+
 Red social para desarrolladores: perfiles técnicos, publicación de proyectos,
 discusiones por tecnología y sistema de comentarios.
 
@@ -123,3 +144,4 @@ erDiagram
 | `interaccion_discusion` | `id` | `id_discusion → discusiones(id)`, `id_usuario → usuarios(id)` | |
 
 Modelo normalizado hasta 3FN: cada atributo no clave depende únicamente de la clave primaria de su tabla, sin dependencias transitivas. Las relaciones muchos-a-muchos (`habilidades`, `proyecto_tecnologias`) se resuelven con tablas intermedias.
+
