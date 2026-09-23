@@ -8,6 +8,7 @@ Repositorio para base de datos para proyecto de fábrica escuela de Red Social p
 - Valentina Garro Ramírez.
 - Laura Katherine Henao Areiza.
 - Edgar Andrés Garzón Marín.
+- Diego Alexander Sánchez
 
 ## Objetivo general
 
