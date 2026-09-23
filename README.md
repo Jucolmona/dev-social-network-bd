@@ -1,5 +1,6 @@
 # dev-social-network-bd
-Repositorio para base de datos para proyecto de fabrica escuela de Red  Social para desarrolladores
+
+Repositorio para base de datos para proyecto de fábrica escuela de Red Social para desarrolladores.
 
 ## Objetivo general
 
@@ -7,10 +8,140 @@ Desarrollar una red social orientada a desarrolladores donde puedan compartir pr
 
 ## Objetivos específicos
 
-- Permitir el registro y el inicio de sección de usuarios en la red social
-- Creacion de perfiles técnicos
-- Publicacion de  proyectos y repositorios de codigo con las demas comunidades de software.
+- Permitir el registro y el inicio de sesión de usuarios en la red social
+- Creación de perfiles técnicos
+- Publicación de proyectos y repositorios de código con las demás comunidades de software
 - Creación de discusiones sobre tecnologías y herramientas
-- Creación de un sistema de comentarios e interacción entre usuarios.
-- Permitir la comunicación a través de mensajeria instantanea entre los miembros de la comunidad.
-- Generacion de reportes sobre la actividad y crecimiento de la comunidad.
+- Creación de un sistema de comentarios e interacción entre usuarios
+- Permitir la comunicación a través de mensajería instantánea entre los miembros de la comunidad
+- Generación de reportes sobre la actividad y crecimiento de la comunidad
+
+---
+
+# Modelo de Base de Datos
+
+Red social para desarrolladores: perfiles técnicos, publicación de proyectos,
+discusiones por tecnología y sistema de comentarios.
+
+## 1. Entidades y relaciones
+
+```mermaid
+erDiagram
+    USUARIOS ||--o| CREDENCIALES : "tiene"
+    USUARIOS ||--o| PERFILES_USUARIO : "tiene"
+    USUARIOS ||--o{ PROYECTOS : "publica"
+    USUARIOS ||--o{ DISCUSIONES : "crea"
+    USUARIOS ||--o{ INTERACCION_DISCUSION : "comenta"
+
+    PERFILES_USUARIO ||--o{ ENLACES_EXTERNOS : "tiene"
+    PERFILES_USUARIO }o--o{ TECNOLOGIAS : "habilidades"
+
+    PROYECTOS ||--o{ PROYECTO_TECNOLOGIAS : "tiene"
+    TECNOLOGIAS ||--o{ PROYECTO_TECNOLOGIAS : "usada en"
+    DISCUSIONES }o--|| TECNOLOGIAS : "pertenece a"
+    DISCUSIONES ||--o{ INTERACCION_DISCUSION : "recibe"
+
+    USUARIOS {
+        uuid id PK
+        varchar nombre
+        varchar apellido
+        varchar username UK
+        varchar email UK
+        timestamptz fecha_registro
+    }
+    CREDENCIALES {
+        uuid id PK
+        uuid usuario_id FK
+        varchar tipo
+        varchar password_hash
+        varchar proveedor_id_externo
+        int intentos_fallidos
+        timestamptz bloqueado_hasta
+    }
+    PERFILES_USUARIO {
+        uuid id PK
+        uuid id_usuario FK
+        varchar bio
+        numeric nivel_completado
+        varchar enlace_portafolio
+        int anio_inicio_dev
+        varchar nivel
+    }
+    ENLACES_EXTERNOS {
+        uuid id PK
+        uuid id_perfil FK
+        varchar nombre_enlace
+        varchar url_enlace
+    }
+    TECNOLOGIAS {
+        uuid id PK
+        varchar nombre_tecnologia UK
+        varchar tipo
+    }
+    PROYECTOS {
+        uuid id PK
+        uuid usuario_id FK
+        varchar titulo
+        varchar descripcion
+        varchar repositorio_url
+        timestamptz fecha_creacion
+    }
+    PROYECTO_TECNOLOGIAS {
+        uuid id_proyecto FK
+        uuid id_tecnologia FK
+    }
+    DISCUSIONES {
+        uuid id PK
+        varchar titulo
+        uuid autor_id FK
+        text contenido
+        uuid id_tecnologia FK
+    }
+    INTERACCION_DISCUSION {
+        uuid id PK
+        uuid id_discusion FK
+        uuid id_usuario FK
+        text comentario
+    }
+```
+
+### Cardinalidades
+
+| Relación | Cardinalidad | Justificación |
+|---|---|---|
+| Usuario — Credencial | 1 a 1 | Cada usuario tiene una única credencial local |
+| Usuario — Perfil | 1 a 1 | Cada usuario tiene un único perfil técnico |
+| Usuario — Proyectos | 1 a muchos | Un usuario puede publicar varios proyectos |
+| Usuario — Discusiones | 1 a muchos | Un usuario puede crear varias discusiones |
+| Perfil — Enlaces externos | 1 a muchos | Un perfil puede tener varios enlaces (GitHub, LinkedIn, portafolio) |
+| Perfil — Tecnologías | muchos a muchos | Un perfil tiene varias habilidades; una tecnología la tienen varios perfiles |
+| Proyecto — Tecnologías | muchos a muchos | Un proyecto usa varias tecnologías; una tecnología la usan varios proyectos |
+| Discusión — Tecnología | muchos a 1 | Cada discusión pertenece a una única tecnología |
+| Discusión — Interacción | 1 a muchos | Una discusión recibe varios comentarios |
+
+## 2. Preguntas clave de negocio
+
+1. ¿Cuántos usuarios nuevos se registraron por mes en los últimos 6 meses?
+2. ¿Cuáles son los 10 proyectos con más tecnologías asociadas?
+3. ¿Qué usuarios tienen su cuenta bloqueada actualmente (bloqueado_hasta vigente)?
+4. ¿Cuántas discusiones existen agrupadas por tecnología?
+5. ¿Cuál es el listado de proyectos publicados por un usuario específico, ordenados por fecha de creación?
+6. ¿Cuáles son las 5 tecnologías más usadas entre todos los proyectos y perfiles combinados?
+
+## 3. Modelo lógico
+
+| Tabla | PK | FK | Notas |
+|---|---|---|---|
+| `usuarios` | `id` | — | `email` y `username` únicos |
+| `credenciales` | `id` | `usuario_id → usuarios(id)` | 1 a 1 con usuario |
+| `perfiles_usuario` | `id` | `id_usuario → usuarios(id)` | 1 a 1 con usuario |
+| `enlaces_externos` | `id` | `id_perfil → perfiles_usuario(id)` | 1 a muchos |
+| `tecnologias` | `id` | — | Catálogo compartido, `nombre_tecnologia` único |
+| `habilidades` | `(id_perfil, id_tecnologia)` | ambas | Tabla intermedia N:M |
+| `proyectos` | `id` | `usuario_id → usuarios(id)` | 1 a muchos |
+| `proyecto_tecnologias` | `(id_proyecto, id_tecnologia)` | ambas | Tabla intermedia N:M |
+| `discusiones` | `id` | `autor_id → usuarios(id)`, `id_tecnologia → tecnologias(id)` | |
+| `interaccion_discusion` | `id` | `id_discusion → discusiones(id)`, `id_usuario → usuarios(id)` | |
+
+Modelo normalizado hasta 3FN: cada atributo no clave depende únicamente de la clave primaria de su tabla, sin dependencias transitivas. Las relaciones muchos-a-muchos (`habilidades`, `proyecto_tecnologias`) se resuelven con tablas intermedias.
+
