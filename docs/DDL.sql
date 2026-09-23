@@ -1,7 +1,6 @@
 -- Tabla de cradenciales para HU-002
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 CREATE TABLE credencial (
     id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
