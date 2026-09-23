@@ -3,6 +3,43 @@ CREATE TABLE users (
     username VARCHAR(50) NOT NULL UNIQUE
 );
 
+CREATE TABLE user_profiles(
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id BIGINT NOT NULL UNIQUE,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    bio VARCHAR(250),
+    complete_prfile DECIMAL(5, 2) NOT NULL DEFAULT 0.00,
+    portfolio_link VARCHAR(250),
+    dev_date_init DATE,
+    seniority VARCHAR(20) NOT NULL,
+
+    FOREIGN KEY (user_id)
+        REFERENCES users(id)
+        ON DELETE CASCADE
+)
+
+CREATE TABLE user_habilities(
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID, NOT NULL,
+    tecnology_id BIGINT NOT NULL,
+    FOREIGN KEY (user_id)
+        REFERENCES user_profiles(id)
+        ON DELETE CASCADE,
+    FOREIGN KEY (tecnology_id)
+        REFERENCES tecnologies(id)
+        ON DELETE CASCADE
+)
+
+CREATE TABLE user_social_links(
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name_link VARCHAR(50) NOT NULL,
+    link_url VARCHAR(250) NOT NULL,
+    user_id UUID NOT NULL,
+    FOREIGN KEY (user_id)
+        REFERENCES user_profiles(id)
+        ON DELETE CASCADE
+)
+
 CREATE TABLE technologies (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     name VARCHAR(100) NOT NULL UNIQUE,
