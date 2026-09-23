@@ -98,3 +98,28 @@ erDiagram
 | Discusión — Tecnología | muchos a 1 | Cada discusión pertenece a una única tecnología |
 | Discusión — Interacción | 1 a muchos | Una discusión recibe varios comentarios |
 
+## 2. Preguntas clave de negocio
+
+1. ¿Cuántos usuarios nuevos se registraron por mes en los últimos 6 meses?
+2. ¿Cuáles son los 10 proyectos con más tecnologías asociadas?
+3. ¿Qué usuarios tienen su cuenta bloqueada actualmente (bloqueado_hasta vigente)?
+4. ¿Cuántas discusiones existen agrupadas por tecnología?
+5. ¿Cuál es el listado de proyectos publicados por un usuario específico, ordenados por fecha de creación?
+6. ¿Cuáles son las 5 tecnologías más usadas entre todos los proyectos y perfiles combinados?
+
+## 3. Modelo lógico
+
+| Tabla | PK | FK | Notas |
+|---|---|---|---|
+| `usuarios` | `id` | — | `email` y `username` únicos |
+| `credenciales` | `id` | `usuario_id → usuarios(id)` | 1 a 1 con usuario |
+| `perfiles_usuario` | `id` | `id_usuario → usuarios(id)` | 1 a 1 con usuario |
+| `enlaces_externos` | `id` | `id_perfil → perfiles_usuario(id)` | 1 a muchos |
+| `tecnologias` | `id` | — | Catálogo compartido, `nombre_tecnologia` único |
+| `habilidades` | `(id_perfil, id_tecnologia)` | ambas | Tabla intermedia N:M |
+| `proyectos` | `id` | `usuario_id → usuarios(id)` | 1 a muchos |
+| `proyecto_tecnologias` | `(id_proyecto, id_tecnologia)` | ambas | Tabla intermedia N:M |
+| `discusiones` | `id` | `autor_id → usuarios(id)`, `id_tecnologia → tecnologias(id)` | |
+| `interaccion_discusion` | `id` | `id_discusion → discusiones(id)`, `id_usuario → usuarios(id)` | |
+
+Modelo normalizado hasta 3FN: cada atributo no clave depende únicamente de la clave primaria de su tabla, sin dependencias transitivas. Las relaciones muchos-a-muchos (`habilidades`, `proyecto_tecnologias`) se resuelven con tablas intermedias.
