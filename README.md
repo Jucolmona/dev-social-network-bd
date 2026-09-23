@@ -84,5 +84,17 @@ erDiagram
     }
 ```
 
+### Cardinalidades
 
+| Relación | Cardinalidad | Justificación |
+|---|---|---|
+| Usuario — Credencial | 1 a 1 | Cada usuario tiene una única credencial local |
+| Usuario — Perfil | 1 a 1 | Cada usuario tiene un único perfil técnico |
+| Usuario — Proyectos | 1 a muchos | Un usuario puede publicar varios proyectos |
+| Usuario — Discusiones | 1 a muchos | Un usuario puede crear varias discusiones |
+| Perfil — Enlaces externos | 1 a muchos | Un perfil puede tener varios enlaces (GitHub, LinkedIn, portafolio) |
+| Perfil — Tecnologías | muchos a muchos | Un perfil tiene varias habilidades; una tecnología la tienen varios perfiles |
+| Proyecto — Tecnologías | muchos a muchos | Un proyecto usa varias tecnologías; una tecnología la usan varios proyectos |
+| Discusión — Tecnología | muchos a 1 | Cada discusión pertenece a una única tecnología |
+| Discusión — Interacción | 1 a muchos | Una discusión recibe varios comentarios |
 
