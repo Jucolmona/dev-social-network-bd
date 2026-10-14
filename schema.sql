@@ -99,16 +99,22 @@ CREATE TABLE proyecto_tecnologias (
 
 -- DISCUSIONES
 CREATE TABLE discusiones (
-    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    titulo          VARCHAR(150) NOT NULL,
-    autor_id        UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
-    contenido       TEXT NOT NULL,
-    fecha_creacion  TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    id_tecnologia   UUID NOT NULL REFERENCES tecnologias(id)
+    id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    titulo                VARCHAR(150) NOT NULL,
+    autor_id              UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    contenido             TEXT NOT NULL,
+    estado                VARCHAR(20) NOT NULL DEFAULT 'ABIERTA',
+    fecha_creacion        TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    ultima_actualizacion  TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    id_tecnologia         UUID NOT NULL REFERENCES tecnologias(id),
+
+    CONSTRAINT chk_discusion_estado CHECK (estado IN ('ABIERTA', 'RESUELTA'))
 );
 
 CREATE INDEX idx_discusiones_autor ON discusiones(autor_id);
 CREATE INDEX idx_discusiones_tecnologia ON discusiones(id_tecnologia);
+
+
 
 -- INTERACCIÓN EN DISCUSIONES 
 
