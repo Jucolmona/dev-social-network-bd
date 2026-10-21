@@ -130,3 +130,16 @@ CREATE INDEX idx_interaccion_discusion ON interaccion_discusion(id_discusion);
 
 
 
+-- INTERACCIÓN EN PROYECTOS (HU013 - comentarios en proyectos)
+ 
+CREATE TABLE interaccion_proyecto (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id_proyecto     UUID NOT NULL REFERENCES proyectos(id) ON DELETE CASCADE,
+    id_usuario      UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    comentario      TEXT NOT NULL,
+    fecha_creacion  TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+ 
+CREATE INDEX idx_interaccion_proyecto ON interaccion_proyecto(id_proyecto);
+
+
