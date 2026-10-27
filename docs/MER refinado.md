@@ -48,11 +48,9 @@ erDiagram
         uuid id_usuario FK, UK
         timestamptz fecha_creacion
         varchar bio
-        numeric nivel_completado
         varchar enlace_portafolio UK
         date fecha_inicio_dev
         varchar nivel
-        int anios_experiencia
     }
     ENLACES_EXTERNOS {
         uuid id PK
@@ -83,9 +81,8 @@ erDiagram
         uuid id_tecnologia PK, FK
     }
     LIKES_PROYECTO {
-        uuid id PK
-        uuid id_proyecto FK
-        uuid id_usuario FK
+        uuid id_proyecto PK, FK
+        uuid id_usuario PK, FK
         timestamptz fecha_creacion
     }
     INTERACCION_PROYECTO {
@@ -96,9 +93,8 @@ erDiagram
         timestamptz fecha_creacion
     }
     SEGUIDORES {
-        uuid id PK
-        uuid id_seguidor FK
-        uuid id_seguido FK
+        uuid id_seguidor PK, FK
+        uuid id_seguido PK, FK
         timestamptz fecha_creacion
     }
     DISCUSIONES {
@@ -128,7 +124,6 @@ erDiagram
         uuid id PK
         uuid id_conversacion FK
         uuid id_remitente FK
-        uuid id_destinatario FK
         varchar contenido
         timestamptz fecha_envio
     }
