@@ -903,7 +903,7 @@ Método: **N(tabla) = N(padre) × razón**; espacio = registros × (bytes por fi
 | `mensajes_privados` | 205 | 102 | 13,82 | 34,56 |
 | **Total** | | | 31,2 | 78,0 |
 
-Validación: se cargaron datos sintéticos del mes 12 (`carga_sintetica.sql`) y se midió con `pg_relation_size`; el total de datos coincide con la estimación (diferencia por tabla entre −5 % y +9 %). A 0,0 MB por cada mil usuarios, un disco de 500 MB se alcanzaría con unos 32.000 usuarios si la actividad se mantiene.
+Validación: se cargaron datos sintéticos del mes 12 (`carga_sintetica.sql`, seguido de `VACUUM ANALYZE`) y se midió con `pg_total_relation_size` (datos más índices): 29,0 MB medidos frente a 31,2 MB estimados, es decir, la estimación queda un 8 % por encima. Por tabla, la diferencia va de −19 % (`conversaciones`) a +17 % (`mensajes_privados`); `tecnologias` se excluye por ser un catálogo de 60 filas. A 15,6 MB por cada mil usuarios (78,0 MB para 5.000 usuarios), un disco de 500 MB se alcanzaría con unos 32.000 usuarios si la actividad se mantiene.
 
 ---
 
