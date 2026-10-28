@@ -1,8 +1,6 @@
 # Análisis de almacenamiento, costo y optimización
 
-Sección 7 del entregable Sprint 2 (Bases de Datos y Laboratorio). Usa solo las fórmulas de referencia de la rúbrica. Las referencias a los apartados 2, 5 y 6 corresponden a la documentación del README.
-
-Este apartado usa únicamente las fórmulas de referencia de la rúbrica (almacenamiento e índices, costo de consultas en páginas de E/S y optimización algebraica) y sus símbolos. Analiza la tabla `mensajes_privados` (7.1) y la consulta PC13, que incluye dos reuniones (7.2 y 7.3). Todas las cifras se calculan paso a paso y llevan su unidad.
+Sección 7 del entregable Sprint 2 (Bases de Datos y Laboratorio). Las referencias a los apartados 2, 5 y 6 corresponden a la documentación del README.
 
 **Parámetros y estadísticas comunes**
 
