@@ -9,8 +9,10 @@ erDiagram
     USUARIOS ||--o{ LIKES_PROYECTO : "da"
     USUARIOS ||--o{ SEGUIDORES : "sigue"
     USUARIOS ||--o{ SEGUIDORES : "es seguido"
-    USUARIOS ||--o{ CONVERSACIONES : "participa"
+    USUARIOS ||--o{ CONVERSACIONES : "participa (uno)"
+    USUARIOS ||--o{ CONVERSACIONES : "participa (dos)"
     USUARIOS ||--o{ MENSAJES_PRIVADOS : "envía"
+    USUARIOS ||--o{ MENSAJES_PRIVADOS : "recibe"
 
     PERFILES_USUARIO ||--o{ ENLACES_EXTERNOS : "tiene"
     PERFILES_USUARIO ||--o{ HABILIDADES : "tiene"
@@ -32,7 +34,7 @@ erDiagram
         varchar nombre
         varchar apellido
         varchar email UK
-        date fecha_creacion
+        timestamptz fecha_registro
     }
     CREDENCIALES {
         uuid id PK
@@ -48,8 +50,9 @@ erDiagram
         uuid id_usuario FK, UK
         timestamptz fecha_creacion
         varchar bio
-        varchar enlace_portafolio UK
-        date fecha_inicio_dev
+        numeric nivel_completado
+        varchar enlace_portafolio
+        int anio_inicio_dev
         varchar nivel
     }
     ENLACES_EXTERNOS {
@@ -116,14 +119,15 @@ erDiagram
     }
     CONVERSACIONES {
         uuid id PK
-        uuid id_usuario_1 FK
-        uuid id_usuario_2 FK
+        uuid id_participante_uno FK
+        uuid id_participante_dos FK
         timestamptz fecha_creacion
     }
     MENSAJES_PRIVADOS {
         uuid id PK
         uuid id_conversacion FK
-        uuid id_remitente FK
+        uuid remitente_id FK
+        uuid destinatario_id FK
         varchar contenido
         timestamptz fecha_envio
     }
