@@ -63,6 +63,7 @@ GRANT SELECT, INSERT ON interaccion_discusion TO rol_administracion;
 GRANT SELECT, INSERT ON interaccion_proyecto TO rol_administracion;
 GRANT SELECT, INSERT, DELETE ON seguidores TO rol_administracion;
 GRANT SELECT, INSERT, DELETE ON likes_proyecto TO rol_administracion;
+GRANT SELECT, INSERT, DELETE ON votos_comentario TO rol_administracion;
 GRANT SELECT, INSERT ON conversaciones TO rol_administracion;
 GRANT SELECT, INSERT ON mensajes_privados TO rol_administracion;
 
@@ -80,6 +81,7 @@ GRANT SELECT ON interaccion_discusion TO rol_consultas;
 GRANT SELECT ON interaccion_proyecto TO rol_consultas;
 GRANT SELECT ON seguidores TO rol_consultas;
 GRANT SELECT ON likes_proyecto TO rol_consultas;
+GRANT SELECT ON votos_comentario TO rol_consultas;
 
 -- rol_analista
 REVOKE ALL ON ALL TABLES IN SCHEMA public FROM rol_analista;
@@ -95,6 +97,7 @@ GRANT SELECT ON interaccion_discusion TO rol_analista;
 GRANT SELECT ON interaccion_proyecto TO rol_analista;
 GRANT SELECT ON seguidores TO rol_analista;
 GRANT SELECT ON likes_proyecto TO rol_analista;
+GRANT SELECT ON votos_comentario TO rol_analista;
 GRANT SELECT (id, fecha_creacion) ON conversaciones TO rol_analista;
 GRANT SELECT (id, id_conversacion, fecha_envio) ON mensajes_privados TO rol_analista;
 
