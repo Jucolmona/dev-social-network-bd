@@ -198,29 +198,6 @@ CREATE TABLE interaccion_proyecto (
 CREATE INDEX idx_interaccion_proyecto ON interaccion_proyecto(id_proyecto);
 COMMENT ON COLUMN interaccion_proyecto.comentario IS 'HU013: no vacio y maximo 1000 caracteres.';
 
--- 11b. RESPUESTAS_COMENTARIO  (HU014: respuestas a un comentario, en hilo)  [NUEVA EN SPRINT 3]
---      Un comentario de proyecto tiene 0..N respuestas; cada respuesta es de un usuario.
---      Tabla aparte (no una columna padre en interaccion_proyecto): asi el listado de
---      comentarios de HU013 no cambia y el conteo de respuestas es una consulta directa.
-
-CREATE TABLE respuestas_comentario (
-    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    id_comentario   UUID NOT NULL REFERENCES interaccion_proyecto(id) ON DELETE CASCADE,
-    id_usuario      UUID NOT NULL REFERENCES usuarios(id)             ON DELETE CASCADE,
-    respuesta       TEXT NOT NULL,
-    fecha_creacion  TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT chk_respuesta_comentario CHECK (
-        btrim(respuesta) <> '' AND char_length(respuesta) <= 1000
-    )
-);
--- Cubre "respuestas de un comentario en orden cronologico" y el conteo por comentario.
-CREATE INDEX idx_respuestas_comentario ON respuestas_comentario(id_comentario, fecha_creacion);
-COMMENT ON TABLE respuestas_comentario IS 'HU014: respuesta de un usuario a un comentario de proyecto.';
-COMMENT ON COLUMN respuestas_comentario.respuesta IS 'HU014: no vacia y maximo 1000 caracteres.';
-
-
-
 -- 12. SEGUIDORES  (HU005)  [NUEVA EN SPRINT 2]
 --     Relacion N:M reflexiva usuarios <-> usuarios.
 
@@ -293,3 +270,25 @@ CREATE TABLE votos_comentario (
 );
 CREATE INDEX idx_votos_comentario_usuario ON votos_comentario(id_usuario);
 COMMENT ON TABLE votos_comentario IS 'Voto positivo de un usuario a un comentario de proyecto; la clave primaria impide votar dos veces.';
+
+
+-- 17. RESPUESTAS_COMENTARIO  (HU014: respuestas a un comentario, en hilo)  [NUEVA EN SPRINT 3]
+--      Un comentario de proyecto tiene 0..N respuestas; cada respuesta es de un usuario.
+--      Tabla aparte (no una columna padre en interaccion_proyecto): asi el listado de
+--      comentarios de HU013 no cambia y el conteo de respuestas es una consulta directa.
+
+CREATE TABLE respuestas_comentario (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id_comentario   UUID NOT NULL REFERENCES interaccion_proyecto(id) ON DELETE CASCADE,
+    id_usuario      UUID NOT NULL REFERENCES usuarios(id)             ON DELETE CASCADE,
+    respuesta       TEXT NOT NULL,
+    fecha_creacion  TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT chk_respuesta_comentario CHECK (
+        btrim(respuesta) <> '' AND char_length(respuesta) <= 1000
+    )
+);
+-- Cubre "respuestas de un comentario en orden cronologico" y el conteo por comentario.
+CREATE INDEX idx_respuestas_comentario ON respuestas_comentario(id_comentario, fecha_creacion);
+COMMENT ON TABLE respuestas_comentario IS 'HU014: respuesta de un usuario a un comentario de proyecto.';
+COMMENT ON COLUMN respuestas_comentario.respuesta IS 'HU014: no vacia y maximo 1000 caracteres.';

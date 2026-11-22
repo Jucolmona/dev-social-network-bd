@@ -444,7 +444,8 @@ SELECT r.id,
 FROM respuestas_comentario r
 JOIN usuarios u ON u.id = r.id_usuario
 WHERE r.id_comentario = (SELECT id FROM interaccion_proyecto
-                         WHERE comentario = 'Muy buen proyecto' LIMIT 1)
+                         WHERE comentario = 'Muy buen proyecto'
+                         ORDER BY fecha_creacion LIMIT 1)
 ORDER BY r.fecha_creacion ASC;
 
 -- [C29] HU014  Sprint 3  Agregación con LEFT JOIN

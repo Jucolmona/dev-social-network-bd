@@ -96,6 +96,13 @@ INSERT INTO interaccion_proyecto (id_proyecto, id_usuario, comentario, fecha_cre
  ('c0000000-0000-0000-0000-000000000001','a0000000-0000-0000-0000-000000000004','¿Piensas agregar tests de integración?', now() - interval '20 days'),
  ('c0000000-0000-0000-0000-000000000002','a0000000-0000-0000-0000-000000000001','Buen uso de React', now() - interval '10 days');
 
+-- ---- Respuestas a comentarios (HU014): 2 respuestas al comentario "Muy buen proyecto" ----
+INSERT INTO respuestas_comentario (id_comentario, id_usuario, respuesta, fecha_creacion) VALUES
+ ((SELECT id FROM interaccion_proyecto WHERE comentario = 'Muy buen proyecto' ORDER BY fecha_creacion LIMIT 1),
+  'a0000000-0000-0000-0000-000000000001','Gracias, qué bueno que te sirva', now() - interval '24 days'),
+ ((SELECT id FROM interaccion_proyecto WHERE comentario = 'Muy buen proyecto' ORDER BY fecha_creacion LIMIT 1),
+  'a0000000-0000-0000-0000-000000000003','Coincido, la documentación está clara', now() - interval '23 days');
+
 -- ---- Seguidores (HU005) -----------------------------------------------
 INSERT INTO seguidores (id_seguidor, id_seguido) VALUES
  ('a0000000-0000-0000-0000-000000000001','a0000000-0000-0000-0000-000000000002'),

@@ -29,3 +29,12 @@ SET ROLE usr_analista; SELECT contenido FROM mensajes_privados LIMIT 1; RESET RO
 SET ROLE usr_analista; SELECT email FROM usuarios; RESET ROLE;
 \echo [P15] el borrado en cascada sigue funcionando (lo ejecuta el propietario)
 BEGIN; DELETE FROM usuarios WHERE id=(SELECT id FROM usuarios ORDER BY email LIMIT 1); SELECT 'ok' AS cascada; ROLLBACK;
+
+\echo [P16] administracion SI inserta respuestas a comentarios (HU014)
+BEGIN; SET ROLE svc_administracion; INSERT INTO respuestas_comentario (id_comentario, id_usuario, respuesta) SELECT c.id, c.id_usuario, 'prueba P16' FROM interaccion_proyecto c LIMIT 1; RESET ROLE; ROLLBACK;
+\echo [P17] administracion NO borra respuestas
+SET ROLE svc_administracion; DELETE FROM respuestas_comentario; RESET ROLE;
+\echo [P18] consultas SI lee respuestas pero NO inserta
+SET ROLE svc_consultas; SELECT count(*) AS respuestas FROM respuestas_comentario; INSERT INTO respuestas_comentario (id_comentario, id_usuario, respuesta) SELECT id, id_usuario, 'x' FROM interaccion_proyecto LIMIT 1; RESET ROLE;
+\echo [P19] autenticacion NO lee respuestas
+SET ROLE svc_autenticacion; SELECT count(*) FROM respuestas_comentario; RESET ROLE;

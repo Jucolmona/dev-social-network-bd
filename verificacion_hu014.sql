@@ -1,5 +1,5 @@
 -- verificacion_hu014.sql - Pruebas de la tabla respuestas_comentario (HU014)
--- Requiere schema.sql + seed.sql cargados. Todo se deshace al final (ROLLBACK).
+-- Requiere schema.sql + seed.sql cargados (el seed ya trae 2 respuestas al comentario 'Muy buen proyecto'). Todo se deshace al final (ROLLBACK).
 \set ON_ERROR_STOP off
 -- Un error esperado no aborta el resto de la transaccion de pruebas:
 \set ON_ERROR_ROLLBACK on
@@ -11,7 +11,7 @@ SELECT c.id, u.id, 'Estoy de acuerdo con tu propuesta'
 FROM interaccion_proyecto c, usuarios u
 WHERE c.comentario = 'Muy buen proyecto' AND u.username = 'LuisDev';
 
-\echo '--- V2: el comentario ya tiene 1 respuesta'
+\echo '--- V2: el comentario tiene 3 respuestas (2 del seed + la de V1)'
 SELECT COUNT(*) AS total_respuestas FROM respuestas_comentario
 WHERE id_comentario = (SELECT id FROM interaccion_proyecto WHERE comentario = 'Muy buen proyecto');
 
@@ -34,7 +34,7 @@ WHERE c.comentario = 'Muy buen proyecto' AND u.username = 'LuisDev';
 INSERT INTO respuestas_comentario (id_comentario, id_usuario, respuesta)
 SELECT gen_random_uuid(), u.id, 'Buen aporte' FROM usuarios u WHERE u.username = 'LuisDev';
 
-\echo '--- V7: al borrar el comentario se borran sus respuestas (ON DELETE CASCADE)'
+\echo '--- V7: al borrar el comentario se borran sus respuestas (ON DELETE CASCADE): debe quedar 0'
 DELETE FROM interaccion_proyecto WHERE comentario = 'Muy buen proyecto';
 SELECT COUNT(*) AS respuestas_restantes FROM respuestas_comentario;
 

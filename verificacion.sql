@@ -3,7 +3,7 @@
 -- Consultas de verificacion de schema.sql (ejecutar DESPUES de schema.sql).
 -- =====================================================================
 
--- [V1] ¿Cuantas tablas se crearon?  (15)
+-- [V1] ¿Cuantas tablas se crearon?  (17)
 SELECT COUNT(*) AS tablas
 FROM information_schema.tables
 WHERE table_schema = 'public' AND table_type = 'BASE TABLE';
@@ -21,7 +21,7 @@ FROM pg_class c
 WHERE c.relnamespace = 'public'::regnamespace AND c.relkind = 'r'
 ORDER BY c.relname;
 
--- [V3] Claves foraneas y su regla ON DELETE  (23 filas)
+-- [V3] Claves foraneas y su regla ON DELETE  (27 filas)
 SELECT conrelid::regclass AS tabla,
        conname            AS restriccion,
        pg_get_constraintdef(oid) AS definicion
