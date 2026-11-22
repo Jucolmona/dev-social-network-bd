@@ -41,7 +41,7 @@ Red social para desarrolladores (CodeF@ctory): perfiles técnicos, publicación 
 | `consultas.sql` | Consultas PC01–PC14 (preguntas clave) y C01–C29 (por historia de usuario) | 4 |
 | `seguridad.sql` | Roles y privilegios (GRANT/REVOKE) | 6 |
 | `verificacion_seguridad.sql` | Comprueba roles y privilegios (S1–S4) | 6 |
-| `pruebas_seguridad.sql` | 19 pruebas de acceso permitido y denegado con `SET ROLE` | 6 |
+| `pruebas_seguridad.sql` | 20 pruebas de acceso permitido y denegado con `SET ROLE` | 6 |
 | `carga_sintetica.sql` | Genera datos a escala del mes 12 para validar la estimación de volumen | 5 |
 | `docs/analisis-almacenamiento.md` | Análisis de almacenamiento, costo y optimización algebraica | 7 |
 | `docs/MER refinado.md` | MER en Mermaid (mismo diagrama de la sección 1) | 1 |
@@ -1008,7 +1008,7 @@ Columnas legibles con S\*:
 - `rol_analista` sobre `conversaciones`: id, fecha_creacion
 - `rol_analista` sobre `mensajes_privados`: id, id_conversacion, fecha_envio
 
-Verificación: `verificacion_seguridad.sql` (catálogo: 8 roles, 42 privilegios por tabla, 6 por columna, 0 para PUBLIC) y `pruebas_seguridad.sql` (19 pruebas con `SET ROLE`, permitidas y denegadas). Probado en PostgreSQL 16 local; no probado desde pgAdmin. Sin RLS: las reglas por fila las aplica el backend.
+Verificación: `verificacion_seguridad.sql` (catálogo: 8 roles, 42 privilegios por tabla, 6 por columna, 0 para PUBLIC) y `pruebas_seguridad.sql` (20 pruebas con `SET ROLE`, permitidas y denegadas). Probado en PostgreSQL 16 local; no probado desde pgAdmin. Sin RLS: las reglas por fila las aplica el backend.
 
 ### Qué rol usa la aplicación
 
@@ -1141,7 +1141,7 @@ COMMENT ON ROLE rol_analista       IS 'Reportes: solo lectura por columnas, sin 
 
 ### Verificación
 
-`verificacion_seguridad.sql` debe devolver: 8 roles (4 de grupo y 4 de conexión), 42 privilegios por tabla, 6 filas de privilegios por columna y 0 permisos para PUBLIC. `pruebas_seguridad.sql` ejecuta 19 pruebas con `SET ROLE`: seis permitidas y trece denegadas con `permission denied`.
+`verificacion_seguridad.sql` debe devolver: 8 roles (4 de grupo y 4 de conexión), 42 privilegios por tabla, 6 filas de privilegios por columna y 0 permisos para PUBLIC. `pruebas_seguridad.sql` ejecuta 20 pruebas con `SET ROLE`: siete permitidas y trece denegadas con `permission denied`.
 
 <!-- ![Roles y verificación de seguridad](docs/img/s2-roles.png) -->
 
@@ -1160,6 +1160,6 @@ El análisis completo está en [`docs/analisis-almacenamiento.md`](docs/analisis
 - MER: nueva entidad RESPUESTAS_COMENTARIO (relación 1:N con INTERACCION_PROYECTO y 1:N con USUARIOS). Se modela como tabla aparte para no alterar el listado de comentarios de HU013. Se actualizaron también `docs/MER refinado.md` y `docs/RELACIONES.md` (junto con `votos_comentario`).
 - Script (`schema.sql`, tabla 17): `respuestas_comentario` con CHECK (no vacía, máximo 1000), FK con ON DELETE CASCADE e índice (id_comentario, fecha_creacion). El esquema pasa de 15 a 17 tablas (con `votos_comentario`).
 - Consultas: C28 (respuestas de un comentario) y C29 (total de respuestas por comentario), ambas de HU014. `seed.sql` incluye 2 respuestas al comentario "Muy buen proyecto" para que devuelvan datos.
-- Roles (`seguridad.sql`): rol_administracion SELECT+INSERT; rol_consultas y rol_analista SELECT; sin UPDATE/DELETE. `pruebas_seguridad.sql` pasa de 15 a 19 pruebas (P16–P19).
+- Roles (`seguridad.sql`): rol_administracion SELECT+INSERT; rol_consultas y rol_analista SELECT; sin UPDATE/DELETE. `pruebas_seguridad.sql` pasa de 15 a 20 pruebas (P16–P20).
 - Migración para bases existentes: `migracion_hu014.sql` (crea la tabla, otorga permisos solo si los roles existen y falla si la tabla existe sin su CHECK). Pruebas: `verificacion_hu014.sql`.
-
+- Contrato con el backend: `respuestas_comentario` no tiene `id_proyecto`, así que la BD no garantiza que el comentario pertenezca al proyecto de la URL; el servicio de administración lo valida (`COMMENT_NOT_IN_PROJECT`, igual que en votos). Las respuestas son de un solo nivel y solo aplican a comentarios de proyecto.
