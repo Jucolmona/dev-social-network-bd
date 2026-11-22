@@ -1088,3 +1088,26 @@ El análisis completo está en [`docs/analisis-almacenamiento.md`](docs/analisis
 - **Tabla analizada:** `mensajes_privados` (registro de 177 bytes, 22 registros por página, 2046 páginas con 45.000 registros). Organización: archivo sin ordenar (heap) con índices B+tree; el índice `idx_mensajes_conversacion` tiene orden d = 64, altura 3 y ocupa 2,80 MB.
 - **Costo de una consulta (PC13):** 36 páginas de E/S con índices frente a 2142 sin ellos.
 - **Optimización algebraica (PC13):** de 90.000 tuplas intermedias a 31 aplicando selecciones y proyecciones lo antes posible (leyes 2, 4 y 5, 11 y 12, 9 y 8).
+
+
+### Cambios respecto al Sprint 2 - HU014 (Respuesta a comentarios)
+- MER: nueva entidad RESPUESTAS_COMENTARIO (relacion 1:N con INTERACCION_PROYECTO y 1:N con USUARIOS). Se modela como tabla aparte para no alterar
+  el listado de comentarios de HU013.
+- Script (schema.sql, seccion 11b): tabla respuestas_comentario con CHECK (no vacia, maximo 1000), FK con ON DELETE CASCADE e indice (id_comentario, fecha_creacion).
+- Consultas: C28 (respuestas de un comentario) y C29 (total de respuestas por comentario), ambas de HU014.
+- Roles (seguridad.sql): rol_administracion SELECT+INSERT; rol_consultas y rol_analista SELECT; sin UPDATE/DELETE.
+- Migracion para bases existentes: migracion_hu014.sql. Pruebas: verificacion_hu014.sql.
+
+Diagrama (Mermaid) para agregar al MER:
+erDiagram
+    INTERACCION_PROYECTO ||--o{ RESPUESTAS_COMENTARIO : "tiene"
+    USUARIOS ||--o{ RESPUESTAS_COMENTARIO : "escribe"
+    RESPUESTAS_COMENTARIO {
+        uuid id PK
+        uuid id_comentario FK
+        uuid id_usuario FK
+        text respuesta
+        timestamptz fecha_creacion
+    }
+
+    
