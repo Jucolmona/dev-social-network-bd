@@ -257,3 +257,17 @@ CREATE TABLE mensajes_privados (
 CREATE INDEX idx_mensajes_conversacion ON mensajes_privados(id_conversacion, fecha_envio);
 CREATE INDEX idx_mensajes_destinatario ON mensajes_privados(destinatario_id);
 COMMENT ON COLUMN mensajes_privados.contenido IS 'HU017: no vacio y maximo 2000 caracteres.';
+
+
+-- 16. VOTOS_COMENTARIO  (HU: votar comentarios)  [NUEVA EN SPRINT 3]
+--     Un voto positivo por usuario y comentario de proyecto.
+
+CREATE TABLE votos_comentario (
+    id_comentario   UUID NOT NULL REFERENCES interaccion_proyecto(id) ON DELETE CASCADE,
+    id_usuario      UUID NOT NULL REFERENCES usuarios(id)             ON DELETE CASCADE,
+    fecha_creacion  TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (id_comentario, id_usuario)
+);
+CREATE INDEX idx_votos_comentario_usuario ON votos_comentario(id_usuario);
+COMMENT ON TABLE votos_comentario IS 'Voto positivo de un usuario a un comentario de proyecto; la clave primaria impide votar dos veces.';
