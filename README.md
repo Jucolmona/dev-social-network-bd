@@ -35,13 +35,15 @@ Red social para desarrolladores (CodeF@ctory): perfiles técnicos, publicación 
 | Archivo | Para qué sirve | Sección |
 |---|---|---|
 | `README.md` | Documentación del sprint (este archivo) | todas |
-| `schema.sql` | Script de estructuras: 17 tablas, claves, restricciones e índices | 3 |
+| `schema.sql` | Script de estructuras: 17 tablas, claves, restricciones, índices, 2 triggers y 3 funciones | 3 |
 | `seed.sql` | Datos semilla de demostración (opcional) | 3, 4 |
-| `verificacion.sql` | Comprueba lo que creó `schema.sql` (V1–V5) | 3 |
+| `verificacion.sql` | Comprueba lo que creó `schema.sql` (V1–V7, incluye triggers y funciones) | 3 |
 | `consultas.sql` | Consultas PC01–PC14 (preguntas clave) y C01–C29 (por historia de usuario) | 4 |
 | `seguridad.sql` | Roles y privilegios (GRANT/REVOKE) | 6 |
-| `verificacion_seguridad.sql` | Comprueba roles y privilegios (S1–S4) | 6 |
-| `pruebas_seguridad.sql` | 20 pruebas de acceso permitido y denegado con `SET ROLE` | 6 |
+| `verificacion_seguridad.sql` | Comprueba roles y privilegios, incluido EXECUTE sobre funciones (S1–S6) | 6 |
+| `pruebas_seguridad.sql` | 25 pruebas de acceso permitido y denegado con `SET ROLE` | 6 |
+| `migracion_hu014.sql` | Aplica lo nuevo de HU014 (tabla, triggers, funciones y permisos) sobre una base ya creada; se puede repetir | 3 |
+| `verificacion_hu014.sql` | Pruebas de HU014: tabla, triggers y funciones (V1–V17, con ROLLBACK) | 3 |
 | `carga_sintetica.sql` | Genera datos a escala del mes 12 para validar la estimación de volumen | 5 |
 | `docs/analisis-almacenamiento.md` | Análisis de almacenamiento, costo y optimización algebraica | 7 |
 | `docs/MER refinado.md` | MER en Mermaid (mismo diagrama de la sección 1) | 1 |
@@ -52,12 +54,12 @@ Red social para desarrolladores (CodeF@ctory): perfiles técnicos, publicación 
 
 ```bash
 createdb codefactory_s2
-for f in schema verificacion seed consultas seguridad verificacion_seguridad pruebas_seguridad; do
+for f in schema verificacion seed verificacion_hu014 consultas seguridad verificacion_seguridad pruebas_seguridad; do
   psql -d codefactory_s2 -f $f.sql
 done
 ```
 
-`pruebas_seguridad.sql` muestra 13 mensajes `permission denied`: son los accesos que **deben** ser denegados. `carga_sintetica.sql` se ejecuta aparte, sobre otra base creada solo con `schema.sql`.
+`verificacion_hu014.sql` y `pruebas_seguridad.sql` muestran errores a propósito (`ERROR:` por restricciones y 16 mensajes `permission denied`): son los casos que **deben** ser rechazados. `carga_sintetica.sql` se ejecuta aparte, sobre otra base creada solo con `schema.sql`.
 
 ---
 
@@ -610,7 +612,7 @@ Excepciones documentadas: `perfiles_usuario.nivel_completado` (dato derivado alm
 
 ## 3. Script de estructuras (schema.sql)
 
-`schema.sql` crea la estructura completa sobre una base PostgreSQL **vacía**: 17 tablas, 17 PK, 27 FK, 6 UNIQUE, 20 CHECK y 15 índices. Solo estructura; los datos de demostración están en `seed.sql`.
+`schema.sql` crea la estructura completa sobre una base PostgreSQL **vacía**: 17 tablas, 17 PK, 27 FK, 6 UNIQUE, 20 CHECK y 15 índices, además de 2 triggers y 3 funciones de las historias de usuario (sección 18 del script). Los datos de demostración están en `seed.sql`.
 
 ### Cómo ejecutarlo
 
@@ -641,6 +643,52 @@ En pgAdmin: crear la base `codefactory_s2`, abrir **Query Tool**, cargar el arch
 | `credenciales`, `perfiles_usuario` | Restricciones nuevas | tipo LOCAL u OAUTH_*; intentos ≥ 0; credencial LOCAL exige hash; `nivel_completado` entre 0 y 100 |
 | `habilidades`, `proyecto_tecnologias` | Índices nuevos | Índice por `id_tecnologia` |
 | `idx_usuarios_email`, `idx_credenciales_usuario_id` | Índices retirados | Redundantes: UNIQUE ya crea un índice equivalente |
+
+### Triggers y procedimientos (Sprint 3)
+
+Están al final de `schema.sql` (sección 18) y también en `migracion_hu014.sql` para bases ya creadas. Cada objeto atiende una historia de usuario (HU); este apartado cubre la **HU014 (respuesta a comentarios en hilos)** y las demás historias agregan aquí sus objetos.
+
+**Triggers**
+
+| Trigger | Tabla | Evento | Momento | Propósito | HU |
+|---|---|---|---|---|---|
+| `trg_respuesta_normaliza` (función `fn_trg_respuesta_normaliza`) | `respuestas_comentario` | INSERT, por fila | BEFORE | Quita los espacios al inicio y al final de la respuesta antes de validarla. Una respuesta en blanco queda vacía y la rechaza el CHECK; el límite de 1000 caracteres se cuenta sobre el texto ya recortado. | HU014, escenarios 4 y 5 |
+| `trg_respuesta_inmutable` (función `fn_trg_respuesta_inmutable`) | `respuestas_comentario` | UPDATE de `id_comentario`, `id_usuario` o `fecha_creacion`, por fila | BEFORE | Impide mover una respuesta a otro comentario o cambiar su autor o su fecha: protege la integridad del hilo. | HU014 |
+
+**Procedimientos (funciones almacenadas)**
+
+| Función | Parámetros | Resultado | Qué hace | HU | Ejecutan |
+|---|---|---|---|---|---|
+| `fn_publicar_respuesta` | `p_id_proyecto`, `p_id_comentario`, `p_id_usuario` (UUID), `p_respuesta` (TEXT) | `id_respuesta`, `total_respuestas` | Valida que el proyecto exista, que el comentario exista y que pertenezca a ese proyecto (la tabla no tiene `id_proyecto`), inserta la respuesta y devuelve el total del hilo. Errores: `PROJECT_NOT_FOUND`, `COMMENT_NOT_FOUND`, `COMMENT_NOT_IN_PROJECT` (mismos códigos que la API). | HU014, escenarios 1, 3 y 8 | `rol_administracion` |
+| `fn_listar_respuestas` | `p_id_comentario` (UUID) | `id`, `id_usuario`, `username`, `respuesta`, `fecha_creacion` | Respuestas de un comentario, de la más antigua a la más reciente. | HU014 (ver el hilo) | `rol_administracion`, `rol_consultas` |
+| `fn_conteo_respuestas_proyecto` | `p_id_proyecto` (UUID) | `id_comentario`, `total_respuestas` | Total de respuestas de cada comentario del proyecto, incluidos los que tienen 0. | HU014 (conteo de respuestas) | `rol_administracion`, `rol_consultas` |
+
+**Ejemplos de llamada** (con `seed.sql` cargado; el comentario «Muy buen proyecto» ya tiene 2 respuestas):
+
+```sql
+-- Publicar una respuesta: devuelve su id y el nuevo total del hilo (3)
+SELECT * FROM fn_publicar_respuesta(
+    (SELECT id_proyecto FROM interaccion_proyecto WHERE comentario = 'Muy buen proyecto'),
+    (SELECT id          FROM interaccion_proyecto WHERE comentario = 'Muy buen proyecto'),
+    (SELECT id          FROM usuarios WHERE username = 'LuisDev'),
+    '   Estoy de acuerdo   ');          -- el trigger la guarda como 'Estoy de acuerdo'
+
+-- Ver el hilo de un comentario
+SELECT username, respuesta FROM fn_listar_respuestas(
+    (SELECT id FROM interaccion_proyecto WHERE comentario = 'Muy buen proyecto'));
+
+-- Total de respuestas por comentario de un proyecto (3 filas: 3, 0 y 0)
+SELECT * FROM fn_conteo_respuestas_proyecto(
+    (SELECT id_proyecto FROM interaccion_proyecto WHERE comentario = 'Muy buen proyecto'));
+
+-- Casos de error: proyecto inexistente, comentario inexistente y comentario de otro proyecto
+SELECT * FROM fn_publicar_respuesta(gen_random_uuid(), gen_random_uuid(), gen_random_uuid(), 'x');
+-- ERROR:  PROJECT_NOT_FOUND: El proyecto no existe
+```
+
+**Pruebas:** `verificacion_hu014.sql` (V8 a V17) prueba cada trigger y cada función con datos de ejemplo, incluidos los casos de error; `pruebas_seguridad.sql` (P21 a P25) prueba quién puede ejecutar cada función; `verificacion.sql` (V6 y V7) lista los triggers y las funciones creados.
+
+**Relación con el backend:** el servicio de administración sigue escribiendo con JPA y valida el proyecto y el comentario en su propio código. Las funciones son la misma regla expresada en la base de datos (con los mismos códigos de error), útil para cargas SQL, scripts y revisiones; el trigger de normalización y el de inmutabilidad sí actúan siempre, venga el dato de donde venga.
 
 ### Evidencia de ejecución
 
@@ -915,6 +963,8 @@ Método: **N(tabla) = N(padre) × razón**; espacio = registros × (bytes por fi
 | `discusiones` | `usuarios` | 0,8 | 1 de cada 2 usuarios crea discusiones, con 1,6 en promedio |
 | `interaccion_discusion` | `discusiones` | 4,0 | 4 comentarios por discusión |
 | `interaccion_proyecto` | `proyectos` | 3,0 | 3 comentarios por proyecto |
+| `respuestas_comentario` | `interaccion_proyecto` | 0,5 | 1 respuesta por cada 2 comentarios de proyecto (HU014, Sprint 3) |
+| `votos_comentario` | `interaccion_proyecto` | 1,0 | 1 voto por comentario de proyecto (Sprint 3) |
 | `seguidores` | `usuarios` | 6,0 | cada usuario sigue a 6 personas |
 | `likes_proyecto` | `proyectos` | 8,0 | 8 likes por proyecto |
 | `conversaciones` | `usuarios` | 1,5 | cada usuario participa en 3 conversaciones (2 participantes por conversación) |
@@ -935,11 +985,13 @@ Método: **N(tabla) = N(padre) × razón**; espacio = registros × (bytes por fi
 | `discusiones` | 1.600 | 133 | 4.000 | 200 |
 | `interaccion_discusion` | 6.400 | 533 | 16.000 | 800 |
 | `interaccion_proyecto` | 9.000 | 750 | 22.500 | 1.125 |
+| `respuestas_comentario` | 4.500 | 375 | 11.250 | 562 |
+| `votos_comentario` | 9.000 | 750 | 22.500 | 1.125 |
 | `seguidores` | 12.000 | 1.000 | 30.000 | 1.500 |
 | `likes_proyecto` | 24.000 | 2.000 | 60.000 | 3.000 |
 | `conversaciones` | 3.000 | 250 | 7.500 | 375 |
 | `mensajes_privados` | 45.000 | 3.750 | 112.500 | 5.625 |
-| **Total** | 132.960 | 11.080 | 332.320 | 16.613 |
+| **Total** | 146.460 | 12.205 | 366.070 | 18.300 |
 
 ### Espacio estimado
 
@@ -956,13 +1008,15 @@ Método: **N(tabla) = N(padre) × razón**; espacio = registros × (bytes por fi
 | `discusiones` | 580 | 93 | 1,08 | 2,69 |
 | `interaccion_discusion` | 209 | 62 | 1,74 | 4,34 |
 | `interaccion_proyecto` | 209 | 62 | 2,44 | 6,10 |
+| `respuestas_comentario` | 209 | 111 | 1,44 | 3,60 |
+| `votos_comentario` | 72 | 111 | 1,65 | 4,12 |
 | `seguidores` | 72 | 80 | 1,82 | 4,56 |
 | `likes_proyecto` | 72 | 80 | 3,65 | 9,12 |
 | `conversaciones` | 88 | 111 | 0,60 | 1,49 |
 | `mensajes_privados` | 205 | 102 | 13,82 | 34,56 |
-| **Total** | | | 31,2 | 78,0 |
+| **Total** | | | 34,3 | 85,7 |
 
-Validación: se cargaron datos sintéticos del mes 12 (`carga_sintetica.sql`, seguido de `VACUUM ANALYZE`) y se midió con `pg_total_relation_size` (datos más índices): 29,0 MB medidos frente a 31,2 MB estimados, es decir, la estimación queda un 8 % por encima. Por tabla, la diferencia va de −19 % (`conversaciones`) a +17 % (`mensajes_privados`); `tecnologias` se excluye por ser un catálogo de 60 filas. A 15,6 MB por cada mil usuarios (78,0 MB para 5.000 usuarios), un disco de 500 MB se alcanzaría con unos 32.000 usuarios si la actividad se mantiene.
+Validación: se cargaron datos sintéticos del mes 12 (`carga_sintetica.sql`, seguido de `VACUUM ANALYZE`) y se midió con `pg_total_relation_size` (datos más índices): 31,7 MB medidos frente a 34,3 MB estimados, es decir, la estimación queda un 8 % por encima. Por tabla, la diferencia va de −19 % (`conversaciones`) a +23 % (`votos_comentario`); `respuestas_comentario` queda en +2 % y `mensajes_privados` en +17 %; `tecnologias` se excluye por ser un catálogo de 60 filas. A 17,1 MB por cada mil usuarios (85,7 MB para 5.000 usuarios), un disco de 500 MB se alcanzaría con unos 29.000 usuarios si la actividad se mantiene. Las dos tablas del Sprint 3 (`respuestas_comentario` y `votos_comentario`) se añadieron a la estimación y a `carga_sintetica.sql` con las razones de la tabla de supuestos, que son de trabajo y deben validarse con el equipo.
 
 ---
 
@@ -999,6 +1053,16 @@ Se usa GRANT/REVOKE con roles de grupo sin LOGIN y usuarios de conexión que her
 | `votos_comentario` | — | SID | S | S |
 | `respuestas_comentario` | — | SI | S | S |
 
+**EXECUTE sobre funciones** (PostgreSQL da EXECUTE a PUBLIC por omisión; `schema.sql` lo revoca y `seguridad.sql` lo otorga solo donde hace falta; las funciones se ejecutan con los privilegios de quien las llama, así que cada rol sigue limitado por sus permisos sobre las tablas)
+
+| Función | autenticacion | administracion | consultas | analista |
+|---|:-:|:-:|:-:|:-:|
+| `fn_publicar_respuesta` | — | X | — | — |
+| `fn_listar_respuestas` | — | X | X | — |
+| `fn_conteo_respuestas_proyecto` | — | X | X | — |
+
+Las funciones de trigger (`fn_trg_respuesta_normaliza`, `fn_trg_respuesta_inmutable`) no son ejecutables por ningún rol: solo las dispara PostgreSQL.
+
 Columnas legibles con S\*:
 
 - `rol_autenticacion` sobre `usuarios`: id, email, username
@@ -1008,7 +1072,7 @@ Columnas legibles con S\*:
 - `rol_analista` sobre `conversaciones`: id, fecha_creacion
 - `rol_analista` sobre `mensajes_privados`: id, id_conversacion, fecha_envio
 
-Verificación: `verificacion_seguridad.sql` (catálogo: 8 roles, 42 privilegios por tabla, 6 por columna, 0 para PUBLIC) y `pruebas_seguridad.sql` (20 pruebas con `SET ROLE`, permitidas y denegadas). Probado en PostgreSQL 16 local; no probado desde pgAdmin. Sin RLS: las reglas por fila las aplica el backend.
+Verificación: `verificacion_seguridad.sql` (catálogo: 8 roles, 42 privilegios por tabla, 6 por columna, 0 para PUBLIC, 5 permisos EXECUTE y 0 funciones de las HU ejecutables por PUBLIC) y `pruebas_seguridad.sql` (25 pruebas con `SET ROLE`, permitidas y denegadas). Probado en PostgreSQL 16 local; no probado desde pgAdmin. Sin RLS: las reglas por fila las aplica el backend.
 
 ### Qué rol usa la aplicación
 
@@ -1130,6 +1194,15 @@ GRANT SELECT ON votos_comentario TO rol_analista;
 GRANT SELECT (id, fecha_creacion) ON conversaciones TO rol_analista;
 GRANT SELECT (id, id_conversacion, fecha_envio) ON mensajes_privados TO rol_analista;
 
+-- EXECUTE sobre las funciones de HU014 (minimo privilegio):
+--   publicar: solo administracion (es quien escribe); listar y contar: administracion y consultas.
+REVOKE ALL ON FUNCTION fn_publicar_respuesta(UUID, UUID, UUID, TEXT) FROM rol_autenticacion, rol_administracion, rol_consultas, rol_analista;
+REVOKE ALL ON FUNCTION fn_listar_respuestas(UUID) FROM rol_autenticacion, rol_administracion, rol_consultas, rol_analista;
+REVOKE ALL ON FUNCTION fn_conteo_respuestas_proyecto(UUID) FROM rol_autenticacion, rol_administracion, rol_consultas, rol_analista;
+GRANT EXECUTE ON FUNCTION fn_publicar_respuesta(UUID, UUID, UUID, TEXT) TO rol_administracion;
+GRANT EXECUTE ON FUNCTION fn_listar_respuestas(UUID) TO rol_administracion, rol_consultas;
+GRANT EXECUTE ON FUNCTION fn_conteo_respuestas_proyecto(UUID) TO rol_administracion, rol_consultas;
+
 -- 5. Documentacion en el catalogo
 COMMENT ON ROLE rol_autenticacion  IS 'Servicio de autenticacion: credenciales y lectura minima de usuarios';
 COMMENT ON ROLE rol_administracion IS 'Servicio de administracion: escritura sobre el negocio; sin acceso a credenciales';
@@ -1141,7 +1214,7 @@ COMMENT ON ROLE rol_analista       IS 'Reportes: solo lectura por columnas, sin 
 
 ### Verificación
 
-`verificacion_seguridad.sql` debe devolver: 8 roles (4 de grupo y 4 de conexión), 42 privilegios por tabla, 6 filas de privilegios por columna y 0 permisos para PUBLIC. `pruebas_seguridad.sql` ejecuta 20 pruebas con `SET ROLE`: siete permitidas y trece denegadas con `permission denied`.
+`verificacion_seguridad.sql` debe devolver: 8 roles (4 de grupo y 4 de conexión), 42 privilegios por tabla, 6 filas de privilegios por columna, 0 permisos para PUBLIC, 5 permisos EXECUTE (S5) y 0 funciones de las HU ejecutables por PUBLIC (S6). `pruebas_seguridad.sql` ejecuta 25 pruebas con `SET ROLE`: nueve permitidas y dieciséis denegadas con `permission denied`.
 
 <!-- ![Roles y verificación de seguridad](docs/img/s2-roles.png) -->
 
@@ -1160,6 +1233,7 @@ El análisis completo está en [`docs/analisis-almacenamiento.md`](docs/analisis
 - MER: nueva entidad RESPUESTAS_COMENTARIO (relación 1:N con INTERACCION_PROYECTO y 1:N con USUARIOS). Se modela como tabla aparte para no alterar el listado de comentarios de HU013. Se actualizaron también `docs/MER refinado.md` y `docs/RELACIONES.md` (junto con `votos_comentario`).
 - Script (`schema.sql`, tabla 17): `respuestas_comentario` con CHECK (no vacía, máximo 1000), FK con ON DELETE CASCADE e índice (id_comentario, fecha_creacion). El esquema pasa de 15 a 17 tablas (con `votos_comentario`).
 - Consultas: C28 (respuestas de un comentario) y C29 (total de respuestas por comentario), ambas de HU014. `seed.sql` incluye 2 respuestas al comentario "Muy buen proyecto" para que devuelvan datos.
-- Roles (`seguridad.sql`): rol_administracion SELECT+INSERT; rol_consultas y rol_analista SELECT; sin UPDATE/DELETE. `pruebas_seguridad.sql` pasa de 15 a 20 pruebas (P16–P20).
-- Migración para bases existentes: `migracion_hu014.sql` (crea la tabla, otorga permisos solo si los roles existen y falla si la tabla existe sin su CHECK). Pruebas: `verificacion_hu014.sql`.
+- Triggers y funciones (`schema.sql`, sección 18): `trg_respuesta_normaliza` (BEFORE INSERT) y `trg_respuesta_inmutable` (BEFORE UPDATE), y las funciones `fn_publicar_respuesta`, `fn_listar_respuestas` y `fn_conteo_respuestas_proyecto`, con ejemplos en la sección 3. Se separan de la tabla para que las reglas de negocio de la HU queden en la base y se puedan probar sin el backend.
+- Roles (`seguridad.sql`): rol_administracion SELECT+INSERT; rol_consultas y rol_analista SELECT; sin UPDATE/DELETE. EXECUTE por función: publicar solo administración; listar y contar administración y consultas; ninguna es ejecutable por PUBLIC. `pruebas_seguridad.sql` pasa de 15 a 25 pruebas (P16–P25) y `verificacion_seguridad.sql` agrega S5 y S6.
+- Migración para bases existentes: `migracion_hu014.sql` (crea la tabla, otorga permisos solo si los roles existen y falla si la tabla existe sin su CHECK). Pruebas: `verificacion_hu014.sql` (V1–V17); `verificacion.sql` agrega V6 y V7 para listar triggers y funciones.
 - Contrato con el backend: `respuestas_comentario` no tiene `id_proyecto`, así que la BD no garantiza que el comentario pertenezca al proyecto de la URL; el servicio de administración lo valida (`COMMENT_NOT_IN_PROJECT`, igual que en votos). Las respuestas son de un solo nivel y solo aplican a comentarios de proyecto.

@@ -31,4 +31,10 @@ INSERT INTO conversaciones(id_participante_uno,id_participante_dos) SELECT uno,d
 INSERT INTO mensajes_privados(id_conversacion,remitente_id,destinatario_id,contenido)
  SELECT c.id, CASE WHEN k%2=0 THEN v.ida ELSE v.idb END, CASE WHEN k%2=0 THEN v.idb ELSE v.ida END, left(repeat(md5(v.rn::text||k),4),100)
  FROM cv v JOIN conversaciones c ON c.id_participante_uno=v.uno AND c.id_participante_dos=v.dos CROSS JOIN generate_series(1,15) k;
+-- Sprint 3: respuestas (0,5 por comentario de proyecto) y votos (1,0 por comentario)
+CREATE TEMP TABLE ic AS SELECT row_number() OVER (ORDER BY id) AS rn, id FROM interaccion_proyecto;
+INSERT INTO respuestas_comentario(id_comentario,id_usuario,respuesta)
+ SELECT ic.id,u.id,left(repeat(md5(ic.rn::text||'r'),4),120) FROM ic JOIN u ON u.rn=1+((ic.rn*7)%2000) WHERE ic.rn%2=0;
+INSERT INTO votos_comentario(id_comentario,id_usuario)
+ SELECT ic.id,u.id FROM ic JOIN u ON u.rn=1+((ic.rn*13+5)%2000);
 VACUUM ANALYZE;

@@ -40,3 +40,14 @@ SET ROLE svc_consultas; SELECT count(*) AS respuestas FROM respuestas_comentario
 SET ROLE svc_consultas; INSERT INTO respuestas_comentario (id_comentario, id_usuario, respuesta) SELECT id, id_usuario, 'x' FROM interaccion_proyecto LIMIT 1; RESET ROLE;
 \echo [P20] autenticacion NO lee respuestas
 SET ROLE svc_autenticacion; SELECT count(*) FROM respuestas_comentario; RESET ROLE;
+
+\echo [P21] autenticacion NO ejecuta fn_publicar_respuesta (EXECUTE solo para administracion)
+SET ROLE svc_autenticacion; SELECT * FROM fn_publicar_respuesta(gen_random_uuid(), gen_random_uuid(), gen_random_uuid(), 'x'); RESET ROLE;
+\echo [P22] consultas NO ejecuta fn_publicar_respuesta (solo lectura)
+SET ROLE svc_consultas; SELECT * FROM fn_publicar_respuesta(gen_random_uuid(), gen_random_uuid(), gen_random_uuid(), 'x'); RESET ROLE;
+\echo [P23] consultas SI ejecuta fn_listar_respuestas
+SET ROLE svc_consultas; SELECT count(*) AS respuestas FROM fn_listar_respuestas((SELECT id FROM interaccion_proyecto WHERE comentario = 'Muy buen proyecto')); RESET ROLE;
+\echo [P24] administracion SI ejecuta fn_publicar_respuesta (se deshace con ROLLBACK)
+BEGIN; SET ROLE svc_administracion; SELECT total_respuestas FROM fn_publicar_respuesta((SELECT id_proyecto FROM interaccion_proyecto WHERE comentario = 'Muy buen proyecto'), (SELECT id FROM interaccion_proyecto WHERE comentario = 'Muy buen proyecto'), (SELECT id FROM usuarios WHERE username = 'LuisDev'), 'prueba P24'); RESET ROLE; ROLLBACK;
+\echo [P25] analista NO ejecuta fn_conteo_respuestas_proyecto
+SET ROLE usr_analista; SELECT * FROM fn_conteo_respuestas_proyecto(gen_random_uuid()); RESET ROLE;

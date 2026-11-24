@@ -104,6 +104,15 @@ GRANT SELECT ON votos_comentario TO rol_analista;
 GRANT SELECT (id, fecha_creacion) ON conversaciones TO rol_analista;
 GRANT SELECT (id, id_conversacion, fecha_envio) ON mensajes_privados TO rol_analista;
 
+-- EXECUTE sobre las funciones de HU014 (minimo privilegio):
+--   publicar: solo administracion (es quien escribe); listar y contar: administracion y consultas.
+REVOKE ALL ON FUNCTION fn_publicar_respuesta(UUID, UUID, UUID, TEXT) FROM rol_autenticacion, rol_administracion, rol_consultas, rol_analista;
+REVOKE ALL ON FUNCTION fn_listar_respuestas(UUID) FROM rol_autenticacion, rol_administracion, rol_consultas, rol_analista;
+REVOKE ALL ON FUNCTION fn_conteo_respuestas_proyecto(UUID) FROM rol_autenticacion, rol_administracion, rol_consultas, rol_analista;
+GRANT EXECUTE ON FUNCTION fn_publicar_respuesta(UUID, UUID, UUID, TEXT) TO rol_administracion;
+GRANT EXECUTE ON FUNCTION fn_listar_respuestas(UUID) TO rol_administracion, rol_consultas;
+GRANT EXECUTE ON FUNCTION fn_conteo_respuestas_proyecto(UUID) TO rol_administracion, rol_consultas;
+
 -- 5. Documentacion en el catalogo
 COMMENT ON ROLE rol_autenticacion  IS 'Servicio de autenticacion: credenciales y lectura minima de usuarios';
 COMMENT ON ROLE rol_administracion IS 'Servicio de administracion: escritura sobre el negocio; sin acceso a credenciales';
