@@ -100,3 +100,25 @@ INTERACCION_DISCUSION(id, id_discusion, id_usuario, comentario)
 - PROYECTO_TECNOLOGIAS(id_proyecto, id_tecnologia)
 - DISCUSIONES(id, titulo, autor_id, contenido, fecha_creacion, id_tecnologia)
 - INTERACCION_DISCUSION(id, id_discusion, id_usuario, comentario)
+
+
+## Version 3 (Sprint 3)
+
+Se agregan las relaciones de comentarios de proyecto y sus derivadas (la Version 2 no las listaba):
+
+- INTERACCION_PROYECTO(id, id_proyecto, id_usuario, comentario, fecha_creacion)
+- VOTOS_COMENTARIO(id_comentario, id_usuario, fecha_creacion)
+- RESPUESTAS_COMENTARIO(id, id_comentario, id_usuario, respuesta, fecha_creacion)
+
+#### RESPUESTAS_COMENTARIO (HU014)
+
+**id --> id_comentario:** una respuesta pertenece a un único comentario
+**id --> id_usuario:** una respuesta tiene un único autor
+**id --> respuesta:** una respuesta tiene un único texto (no vacío, máximo 1000 caracteres)
+**id --> fecha_creacion:** una respuesta se publica en un único instante
+
+> Un comentario tiene 0..N respuestas y un usuario escribe 0..N respuestas (1:N en ambos sentidos). Se separa en una relación propia, y no como columna `id_padre` de INTERACCION_PROYECTO, para no alterar el listado de comentarios (HU013) y porque cada atributo depende solo de `id` (3FN/BCNF).
+
+#### VOTOS_COMENTARIO
+
+**(id_comentario, id_usuario) --> fecha_creacion:** un usuario vota una sola vez cada comentario; la fecha depende de la clave completa.

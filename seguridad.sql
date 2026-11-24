@@ -61,6 +61,7 @@ GRANT SELECT, INSERT, DELETE ON proyecto_tecnologias TO rol_administracion;
 GRANT SELECT, INSERT, UPDATE ON discusiones TO rol_administracion;
 GRANT SELECT, INSERT ON interaccion_discusion TO rol_administracion;
 GRANT SELECT, INSERT ON interaccion_proyecto TO rol_administracion;
+GRANT SELECT, INSERT ON respuestas_comentario TO rol_administracion;
 GRANT SELECT, INSERT, DELETE ON seguidores TO rol_administracion;
 GRANT SELECT, INSERT, DELETE ON likes_proyecto TO rol_administracion;
 GRANT SELECT, INSERT, DELETE ON votos_comentario TO rol_administracion;
@@ -79,6 +80,7 @@ GRANT SELECT ON proyecto_tecnologias TO rol_consultas;
 GRANT SELECT ON discusiones TO rol_consultas;
 GRANT SELECT ON interaccion_discusion TO rol_consultas;
 GRANT SELECT ON interaccion_proyecto TO rol_consultas;
+GRANT SELECT ON respuestas_comentario TO rol_consultas;
 GRANT SELECT ON seguidores TO rol_consultas;
 GRANT SELECT ON likes_proyecto TO rol_consultas;
 GRANT SELECT ON votos_comentario TO rol_consultas;
@@ -95,11 +97,21 @@ GRANT SELECT ON proyecto_tecnologias TO rol_analista;
 GRANT SELECT ON discusiones TO rol_analista;
 GRANT SELECT ON interaccion_discusion TO rol_analista;
 GRANT SELECT ON interaccion_proyecto TO rol_analista;
+GRANT SELECT ON respuestas_comentario TO rol_analista;
 GRANT SELECT ON seguidores TO rol_analista;
 GRANT SELECT ON likes_proyecto TO rol_analista;
 GRANT SELECT ON votos_comentario TO rol_analista;
 GRANT SELECT (id, fecha_creacion) ON conversaciones TO rol_analista;
 GRANT SELECT (id, id_conversacion, fecha_envio) ON mensajes_privados TO rol_analista;
+
+-- EXECUTE sobre las funciones de HU014 (minimo privilegio):
+--   publicar: solo administracion (es quien escribe); listar y contar: administracion y consultas.
+REVOKE ALL ON FUNCTION fn_publicar_respuesta(UUID, UUID, UUID, TEXT) FROM rol_autenticacion, rol_administracion, rol_consultas, rol_analista;
+REVOKE ALL ON FUNCTION fn_listar_respuestas(UUID) FROM rol_autenticacion, rol_administracion, rol_consultas, rol_analista;
+REVOKE ALL ON FUNCTION fn_conteo_respuestas_proyecto(UUID) FROM rol_autenticacion, rol_administracion, rol_consultas, rol_analista;
+GRANT EXECUTE ON FUNCTION fn_publicar_respuesta(UUID, UUID, UUID, TEXT) TO rol_administracion;
+GRANT EXECUTE ON FUNCTION fn_listar_respuestas(UUID) TO rol_administracion, rol_consultas;
+GRANT EXECUTE ON FUNCTION fn_conteo_respuestas_proyecto(UUID) TO rol_administracion, rol_consultas;
 
 -- 5. Documentacion en el catalogo
 COMMENT ON ROLE rol_autenticacion  IS 'Servicio de autenticacion: credenciales y lectura minima de usuarios';

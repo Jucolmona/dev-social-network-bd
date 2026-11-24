@@ -6,6 +6,8 @@ erDiagram
     USUARIOS ||--o{ DISCUSIONES : "crea"
     USUARIOS ||--o{ INTERACCION_DISCUSION : "comenta"
     USUARIOS ||--o{ INTERACCION_PROYECTO : "comenta"
+    USUARIOS ||--o{ RESPUESTAS_COMENTARIO : "escribe"
+    USUARIOS ||--o{ VOTOS_COMENTARIO : "vota"
     USUARIOS ||--o{ LIKES_PROYECTO : "da"
     USUARIOS ||--o{ SEGUIDORES : "sigue"
     USUARIOS ||--o{ SEGUIDORES : "es seguido"
@@ -22,6 +24,8 @@ erDiagram
     TECNOLOGIAS ||--o{ PROYECTO_TECNOLOGIAS : "se usa en"
     PROYECTOS ||--o{ LIKES_PROYECTO : "recibe"
     PROYECTOS ||--o{ INTERACCION_PROYECTO : "recibe"
+    INTERACCION_PROYECTO ||--o{ RESPUESTAS_COMENTARIO : "tiene"
+    INTERACCION_PROYECTO ||--o{ VOTOS_COMENTARIO : "recibe"
 
     TECNOLOGIAS ||--o{ DISCUSIONES : "agrupa"
     DISCUSIONES ||--o{ INTERACCION_DISCUSION : "recibe"
@@ -93,6 +97,18 @@ erDiagram
         uuid id_proyecto FK
         uuid id_usuario FK
         text comentario
+        timestamptz fecha_creacion
+    }
+    RESPUESTAS_COMENTARIO {
+        uuid id PK
+        uuid id_comentario FK
+        uuid id_usuario FK
+        text respuesta
+        timestamptz fecha_creacion
+    }
+    VOTOS_COMENTARIO {
+        uuid id_comentario PK, FK
+        uuid id_usuario PK, FK
         timestamptz fecha_creacion
     }
     SEGUIDORES {

@@ -13,3 +13,11 @@ WHERE table_schema='public' AND grantee LIKE 'rol\_%' AND privilege_type='SELECT
 GROUP BY 1,2 ORDER BY 1,2;
 -- [S4] Nadie fuera de los roles definidos tiene acceso (PUBLIC)
 SELECT count(*) AS permisos_para_public FROM information_schema.role_table_grants WHERE table_schema='public' AND grantee='PUBLIC';
+-- [S5] EXECUTE sobre las funciones de las HU (solo los roles que las necesitan)
+SELECT grantee AS rol, routine_name AS funcion
+FROM information_schema.routine_privileges
+WHERE routine_schema='public' AND routine_name LIKE 'fn\_%' AND grantee LIKE 'rol\_%' AND privilege_type='EXECUTE'
+ORDER BY 1,2;
+-- [S6] Ninguna funcion de las HU (fn_*) es ejecutable por PUBLIC (se excluyen las de la extension pgcrypto)
+SELECT count(*) AS funciones_hu_ejecutables_por_public FROM information_schema.routine_privileges
+WHERE routine_schema='public' AND routine_name LIKE 'fn\_%' AND grantee='PUBLIC' AND privilege_type='EXECUTE';

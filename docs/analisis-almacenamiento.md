@@ -20,7 +20,7 @@ Sección 7 del entregable Sprint 2 (Bases de Datos y Laboratorio). Las referenci
 
 ### 7.1.1 Tabla elegida
 
-Se analiza `mensajes_privados` porque es la tabla de mayor crecimiento (112.500 registros al mes 24, el 44 % del espacio estimado en 5.4), la consultan PC13 y PC14 y es inmutable: la aplicación solo inserta y lee (HU017). Esa forma de uso (inserciones al final, sin actualizaciones) condiciona la organización de archivo que se elige en 7.1.3.
+Se analiza `mensajes_privados` porque es la tabla de mayor crecimiento (112.500 registros al mes 24, el 40 % del espacio estimado en 5.4), la consultan PC13 y PC14 y es inmutable: la aplicación solo inserta y lee (HU017). Esa forma de uso (inserciones al final, sin actualizaciones) condiciona la organización de archivo que se elige en 7.1.3.
 
 ### 7.1.2 Longitud del registro, registros por bloque y páginas de la tabla
 

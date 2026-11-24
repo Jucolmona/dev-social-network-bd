@@ -434,3 +434,28 @@ SELECT u.username,
        (SELECT COUNT(*) FROM seguidores f             WHERE f.id_seguido = u.id)  AS seguidores
 FROM usuarios u
 ORDER BY proyectos DESC, u.username;
+
+-- [C28] HU014  Sprint 3  Join + ordenamiento
+-- Pregunta: Cuáles son las respuestas de un comentario de proyecto, quién las escribió y cuándo, de la más antigua a la más reciente?
+SELECT r.id,
+       u.username      AS autor_respuesta,
+       r.respuesta,
+       r.fecha_creacion
+FROM respuestas_comentario r
+JOIN usuarios u ON u.id = r.id_usuario
+WHERE r.id_comentario = (SELECT id FROM interaccion_proyecto
+                         WHERE comentario = 'Muy buen proyecto'
+                         ORDER BY fecha_creacion LIMIT 1)
+ORDER BY r.fecha_creacion ASC;
+
+-- [C29] HU014  Sprint 3  Agregación con LEFT JOIN
+-- Pregunta: Cuántas respuestas tiene cada comentario de un proyecto (incluidos los que tienen 0)?
+SELECT c.id AS id_comentario,
+       uc.username AS autor_comentario,
+       COUNT(r.id) AS total_respuestas
+FROM interaccion_proyecto c
+JOIN usuarios uc ON uc.id = c.id_usuario
+LEFT JOIN respuestas_comentario r ON r.id_comentario = c.id
+WHERE c.id_proyecto = (SELECT id FROM proyectos ORDER BY fecha_creacion LIMIT 1)
+GROUP BY c.id, uc.username
+ORDER BY total_respuestas DESC, c.id;
