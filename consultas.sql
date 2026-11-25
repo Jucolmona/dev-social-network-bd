@@ -459,3 +459,73 @@ LEFT JOIN respuestas_comentario r ON r.id_comentario = c.id
 WHERE c.id_proyecto = (SELECT id FROM proyectos ORDER BY fecha_creacion LIMIT 1)
 GROUP BY c.id, uc.username
 ORDER BY total_respuestas DESC, c.id;
+
+-- [C30] HU018  Sprint 3  Agregación con LEFT JOIN y subconsulta
+-- Pregunta: Cuántos mensajes sin leer tiene un usuario en cada una de sus conversaciones (incluidas las que tienen 0)?
+SELECT cv.id AS id_conversacion,
+       otro.username AS conversa_con,
+       COUNT(m.id) AS no_leidos
+FROM usuarios yo
+JOIN conversaciones cv ON yo.id IN (cv.id_participante_uno, cv.id_participante_dos)
+JOIN usuarios otro ON otro.id = CASE WHEN cv.id_participante_uno = yo.id THEN cv.id_participante_dos ELSE cv.id_participante_uno END
+LEFT JOIN conversation_read_states r ON r.id_conversacion = cv.id AND r.id_usuario = yo.id
+LEFT JOIN mensajes_privados m ON m.id_conversacion = cv.id
+                              AND m.destinatario_id = yo.id
+                              AND (r.id IS NULL OR m.fecha_envio > r.fecha_ultima_lectura)
+WHERE yo.username = 'PepitoDevPro'
+GROUP BY cv.id, otro.username
+ORDER BY no_leidos DESC, otro.username;
+
+-- [C31] HU018  Sprint 3  Agregación con HAVING
+-- Pregunta: Qué usuarios tienen mensajes recibidos sin leer y cuántos en total (para mostrar su indicador de mensajes pendientes)?
+SELECT u.username, COUNT(m.id) AS total_no_leidos
+FROM mensajes_privados m
+JOIN usuarios u ON u.id = m.destinatario_id
+LEFT JOIN conversation_read_states r ON r.id_conversacion = m.id_conversacion AND r.id_usuario = m.destinatario_id
+WHERE r.id IS NULL OR m.fecha_envio > r.fecha_ultima_lectura
+GROUP BY u.username
+HAVING COUNT(m.id) > 0
+ORDER BY total_no_leidos DESC, u.username;
+
+-- [C32] HU019  Sprint 3  Join + ordenamiento
+-- Pregunta: A quién ha bloqueado un usuario y desde cuándo (lista de usuarios bloqueados)?
+SELECT bloqueado.username AS usuario_bloqueado,
+       b.fecha_bloqueo
+FROM usuarios_bloqueados b
+JOIN usuarios quien   ON quien.id     = b.blocker_id
+JOIN usuarios bloqueado ON bloqueado.id = b.blocked_id
+WHERE quien.username = 'AnaCoder'
+ORDER BY b.fecha_bloqueo DESC;
+
+-- [C33] HU019  Sprint 3  Subconsulta (NOT EXISTS)
+-- Pregunta: Qué parejas de usuarios con conversación no pueden escribirse porque existe un bloqueo en cualquiera de los dos sentidos?
+SELECT ua.username AS usuario_uno, ub.username AS usuario_dos
+FROM conversaciones cv
+JOIN usuarios ua ON ua.id = cv.id_participante_uno
+JOIN usuarios ub ON ub.id = cv.id_participante_dos
+WHERE EXISTS (SELECT 1 FROM usuarios_bloqueados b
+              WHERE (b.blocker_id = cv.id_participante_uno AND b.blocked_id = cv.id_participante_dos)
+                 OR (b.blocker_id = cv.id_participante_dos AND b.blocked_id = cv.id_participante_uno))
+ORDER BY ua.username;
+
+-- [C34] Votar comentarios  Sprint 3  Agregación con LEFT JOIN
+-- Pregunta: Cuáles son los comentarios más votados de un proyecto y quién los escribió (incluidos los que tienen 0 votos)?
+SELECT c.comentario,
+       uc.username AS autor_comentario,
+       COUNT(v.id_usuario) AS votos
+FROM interaccion_proyecto c
+JOIN usuarios uc ON uc.id = c.id_usuario
+LEFT JOIN votos_comentario v ON v.id_comentario = c.id
+WHERE c.id_proyecto = (SELECT id FROM proyectos ORDER BY fecha_creacion LIMIT 1)
+GROUP BY c.id, c.comentario, uc.username
+ORDER BY votos DESC, c.comentario;
+
+-- [C35] Votar comentarios + HU014  Sprint 3  Subconsultas correlacionadas en tabla derivada
+-- Pregunta: Cuánta interacción tiene cada comentario de un proyecto (votos y respuestas) para ordenarlos por relevancia?
+SELECT t.comentario, t.votos, t.respuestas
+FROM (SELECT c.comentario,
+             (SELECT COUNT(*) FROM votos_comentario v      WHERE v.id_comentario = c.id) AS votos,
+             (SELECT COUNT(*) FROM respuestas_comentario r WHERE r.id_comentario = c.id) AS respuestas
+      FROM interaccion_proyecto c
+      WHERE c.id_proyecto = (SELECT id FROM proyectos ORDER BY fecha_creacion LIMIT 1)) t
+ORDER BY t.votos + t.respuestas DESC, t.comentario;

@@ -122,3 +122,24 @@ Se agregan las relaciones de comentarios de proyecto y sus derivadas (la Version
 #### VOTOS_COMENTARIO
 
 **(id_comentario, id_usuario) --> fecha_creacion:** un usuario vota una sola vez cada comentario; la fecha depende de la clave completa.
+
+## Version 4 (Sprint 3, HU018 y HU019)
+
+Se agregan dos relaciones:
+
+- CONVERSATION_READ_STATES(id, id_conversacion, id_usuario, fecha_ultima_lectura)
+- USUARIOS_BLOQUEADOS(id, blocker_id, blocked_id, fecha_bloqueo)
+
+#### CONVERSATION_READ_STATES (HU018)
+
+**id --> id_conversacion, id_usuario, fecha_ultima_lectura:** cada marca pertenece a una conversación y a un usuario, y guarda su último momento de lectura.
+**(id_conversacion, id_usuario) --> id, fecha_ultima_lectura:** clave candidata: hay una sola marca por usuario y conversación.
+
+> Se separa de MENSAJES_PRIVADOS porque la lectura es un hecho del par (usuario, conversación), no de cada mensaje: guardarla en el mensaje repetiría el dato y exigiría actualizar muchas filas al leer (3FN/BCNF).
+
+#### USUARIOS_BLOQUEADOS (HU019)
+
+**id --> blocker_id, blocked_id, fecha_bloqueo:** cada bloqueo tiene un único bloqueador, un único bloqueado y una fecha.
+**(blocker_id, blocked_id) --> id, fecha_bloqueo:** clave candidata: un usuario bloquea una sola vez a otro.
+
+> Es direccional (A bloquea a B no implica que B bloquee a A); la restricción de mensajes sí es mutua y se aplica con el trigger `trg_mensaje_sin_bloqueo`. Un usuario no puede bloquearse a sí mismo (CHECK).

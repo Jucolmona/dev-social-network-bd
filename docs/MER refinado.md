@@ -14,6 +14,9 @@ erDiagram
     USUARIOS ||--o{ CONVERSACIONES : "participa (uno)"
     USUARIOS ||--o{ CONVERSACIONES : "participa (dos)"
     USUARIOS ||--o{ MENSAJES_PRIVADOS : "envía"
+    USUARIOS ||--o{ CONVERSATION_READ_STATES : "lee"
+    USUARIOS ||--o{ USUARIOS_BLOQUEADOS : "bloquea"
+    USUARIOS ||--o{ USUARIOS_BLOQUEADOS : "es bloqueado"
     USUARIOS ||--o{ MENSAJES_PRIVADOS : "recibe"
 
     PERFILES_USUARIO ||--o{ ENLACES_EXTERNOS : "tiene"
@@ -31,6 +34,7 @@ erDiagram
     DISCUSIONES ||--o{ INTERACCION_DISCUSION : "recibe"
 
     CONVERSACIONES ||--o{ MENSAJES_PRIVADOS : "contiene"
+    CONVERSACIONES ||--o{ CONVERSATION_READ_STATES : "registra lectura"
 
     USUARIOS {
         uuid id PK
@@ -110,6 +114,18 @@ erDiagram
         uuid id_comentario PK, FK
         uuid id_usuario PK, FK
         timestamptz fecha_creacion
+    }
+    CONVERSATION_READ_STATES {
+        uuid id PK
+        uuid id_conversacion FK, UK
+        uuid id_usuario FK, UK
+        timestamptz fecha_ultima_lectura
+    }
+    USUARIOS_BLOQUEADOS {
+        uuid id PK
+        uuid blocker_id FK, UK
+        uuid blocked_id FK, UK
+        timestamptz fecha_bloqueo
     }
     SEGUIDORES {
         uuid id_seguidor PK, FK

@@ -35,15 +35,17 @@ Red social para desarrolladores (CodeF@ctory): perfiles técnicos, publicación 
 | Archivo | Para qué sirve | Sección |
 |---|---|---|
 | `README.md` | Documentación del sprint (este archivo) | todas |
-| `schema.sql` | Script de estructuras: 17 tablas, claves, restricciones, índices, 2 triggers y 3 funciones | 3 |
+| `schema.sql` | Script de estructuras: 19 tablas, claves, restricciones, índices, 5 triggers y 10 funciones | 3 |
 | `seed.sql` | Datos semilla de demostración (opcional) | 3, 4 |
 | `verificacion.sql` | Comprueba lo que creó `schema.sql` (V1–V7, incluye triggers y funciones) | 3 |
-| `consultas.sql` | Consultas PC01–PC14 (preguntas clave) y C01–C29 (por historia de usuario) | 4 |
+| `consultas.sql` | Consultas PC01–PC14 (preguntas clave) y C01–C35 (por historia de usuario) | 4 |
 | `seguridad.sql` | Roles y privilegios (GRANT/REVOKE) | 6 |
 | `verificacion_seguridad.sql` | Comprueba roles y privilegios, incluido EXECUTE sobre funciones (S1–S6) | 6 |
-| `pruebas_seguridad.sql` | 25 pruebas de acceso permitido y denegado con `SET ROLE` | 6 |
+| `pruebas_seguridad.sql` | 36 pruebas de acceso permitido y denegado con `SET ROLE` | 6 |
 | `migracion_hu014.sql` | Aplica lo nuevo de HU014 (tabla, triggers, funciones y permisos) sobre una base ya creada; se puede repetir | 3 |
 | `verificacion_hu014.sql` | Pruebas de HU014: tabla, triggers y funciones (V1–V17, con ROLLBACK) | 3 |
+| `migracion_sprint3.sql` | Aplica lo nuevo de HU018, HU019 y votar comentarios (2 tablas, 3 triggers, 7 funciones y permisos) sobre una base ya creada; se puede repetir | 3 |
+| `verificacion_sprint3.sql` | Pruebas de HU018, HU019 y votar comentarios: triggers y funciones (V18–V41, con ROLLBACK) | 3 |
 | `carga_sintetica.sql` | Genera datos a escala del mes 12 para validar la estimación de volumen | 5 |
 | `docs/analisis-almacenamiento.md` | Análisis de almacenamiento, costo y optimización algebraica | 7 |
 | `docs/MER refinado.md` | MER en Mermaid (mismo diagrama de la sección 1) | 1 |
@@ -65,7 +67,7 @@ done
 
 ## 1. MER refinado
 
-MER del Sprint 3 con las 17 entidades, sus atributos, llaves (PK, FK, UK) y cardinalidades. Es el mismo diagrama de `docs/MER refinado.md` y coincide con `schema.sql`.
+MER del Sprint 3 con las 19 entidades, sus atributos, llaves (PK, FK, UK) y cardinalidades. Es el mismo diagrama de `docs/MER refinado.md` y coincide con `schema.sql`.
 
 ```mermaid
 erDiagram
@@ -80,8 +82,13 @@ erDiagram
     USUARIOS ||--o{ LIKES_PROYECTO : "da"
     USUARIOS ||--o{ SEGUIDORES : "sigue"
     USUARIOS ||--o{ SEGUIDORES : "es seguido"
-    USUARIOS ||--o{ CONVERSACIONES : "participa"
+    USUARIOS ||--o{ CONVERSACIONES : "participa (uno)"
+    USUARIOS ||--o{ CONVERSACIONES : "participa (dos)"
     USUARIOS ||--o{ MENSAJES_PRIVADOS : "envía"
+    USUARIOS ||--o{ MENSAJES_PRIVADOS : "recibe"
+    USUARIOS ||--o{ CONVERSATION_READ_STATES : "lee"
+    USUARIOS ||--o{ USUARIOS_BLOQUEADOS : "bloquea"
+    USUARIOS ||--o{ USUARIOS_BLOQUEADOS : "es bloqueado"
 
     PERFILES_USUARIO ||--o{ ENLACES_EXTERNOS : "tiene"
     PERFILES_USUARIO ||--o{ HABILIDADES : "tiene"
@@ -98,6 +105,7 @@ erDiagram
     DISCUSIONES ||--o{ INTERACCION_DISCUSION : "recibe"
 
     CONVERSACIONES ||--o{ MENSAJES_PRIVADOS : "contiene"
+    CONVERSACIONES ||--o{ CONVERSATION_READ_STATES : "registra lectura"
 
     USUARIOS {
         uuid id PK
@@ -178,6 +186,18 @@ erDiagram
         uuid id_usuario PK, FK
         timestamptz fecha_creacion
     }
+    CONVERSATION_READ_STATES {
+        uuid id PK
+        uuid id_conversacion FK, UK
+        uuid id_usuario FK, UK
+        timestamptz fecha_ultima_lectura
+    }
+    USUARIOS_BLOQUEADOS {
+        uuid id PK
+        uuid blocker_id FK, UK
+        uuid blocked_id FK, UK
+        timestamptz fecha_bloqueo
+    }
     SEGUIDORES {
         uuid id_seguidor PK, FK
         uuid id_seguido PK, FK
@@ -238,6 +258,9 @@ erDiagram
 | interaccion_proyecto — respuestas_comentario | 1 a N | Respuestas de un comentario (HU014) |
 | usuarios — respuestas_comentario | 1 a N | Autor de cada respuesta |
 | usuarios — interaccion_proyecto (votos_comentario) | N a M | Un voto por usuario y comentario; se resuelve con `votos_comentario` |
+| conversaciones — conversation_read_states | 1 a N | Una marca de lectura por participante de la conversación (HU018) |
+| usuarios — conversation_read_states | 1 a N | Hasta qué momento leyó cada usuario cada conversación; única por par (HU018) |
+| usuarios — usuarios (usuarios_bloqueados) | N a M reflexiva, direccional | Quién bloquea a quién; única por par y sin auto bloqueo (HU019) |
 | usuarios — usuarios (seguidores) | N a M reflexiva | Quién sigue a quién; dos claves hacia `usuarios` |
 | proyectos — usuarios (likes_proyecto) | N a M | Un like por usuario y proyecto |
 | usuarios — conversaciones | N a M (2 participantes) | Una conversación por pareja de usuarios |
@@ -254,6 +277,8 @@ erDiagram
 | `votos_comentario` | Entidad nueva (N:M usuarios–comentarios de proyecto), Sprint 3 | votar comentarios |
 | `respuestas_comentario` | Entidad nueva (1:N comentario–respuestas), Sprint 3 | HU014 |
 | `conversaciones`, `mensajes_privados` | Entidades nuevas: mensajería privada | HU017 |
+| `conversation_read_states` | Entidad nueva (marca de lectura por usuario y conversación), Sprint 3. El backend ya la usa (`ConversationReadStateEntity`) | HU018 |
+| `usuarios_bloqueados` | Entidad nueva (bloqueo direccional usuario–usuario), Sprint 3. El backend la usa en la rama de HU019 (`UsuarioBloqueadoEntity`) | HU019 |
 | `habilidades` | La relación N:M perfil–tecnología pasa a entidad con PK compuesta | HU003 |
 | `discusiones` | Atributos nuevos: `estado`, `fecha_creacion`, `ultima_actualizacion` | HU011, HU012 |
 | `interaccion_discusion` | Atributo nuevo: `fecha_creacion` | HU011 |
@@ -266,7 +291,7 @@ El resto de entidades (`usuarios`, `credenciales`, `enlaces_externos`, `tecnolog
 
 ## 2. Modelo físico completo (claves y restricciones)
 
-Documentado a partir del catálogo de PostgreSQL después de ejecutar `schema.sql` (por eso coincide con el script) (17 tablas, 81 columnas, 17 PK, 27 FK, 6 UNIQUE, 20 CHECK y 15 índices).
+Documentado a partir del catálogo de PostgreSQL después de ejecutar `schema.sql` (por eso coincide con el script) (19 tablas, 89 columnas, 19 PK, 31 FK, 8 UNIQUE, 21 CHECK y 17 índices).
 
 ### Convenciones
 
@@ -295,6 +320,8 @@ Documentado a partir del catálogo de PostgreSQL después de ejecutar `schema.sq
 | 15 | `mensajes_privados` | Dependiente | 6 | 1 | 3 | 0 | 2 | HU017 |
 | 16 | `votos_comentario` | Asociativa N:M | 3 | 1 | 2 | 0 | 0 | votar comentarios (Sprint 3) |
 | 17 | `respuestas_comentario` | Dependiente | 5 | 1 | 2 | 0 | 1 | HU014 (Sprint 3) |
+| 18 | `conversation_read_states` | Dependiente | 4 | 1 | 2 | 1 | 0 | HU018 (Sprint 3) |
+| 19 | `usuarios_bloqueados` | Asociativa N:M (reflexiva) | 4 | 1 | 2 | 1 | 1 | HU019 (Sprint 3) |
 
 ### Diccionario de datos
 
@@ -552,6 +579,37 @@ Respuestas a un comentario de proyecto, en hilo (máx. 1000 caracteres; Sprint 3
 - `chk_respuesta_comentario`: Respuesta no vacía y de máximo 1000 caracteres. (HU014).
 - Índice `idx_respuestas_comentario`: Respuestas de un comentario en orden cronológico (C28, C29).
 
+#### `conversation_read_states`
+
+Hasta qué momento leyó un usuario una conversación (Sprint 3). Historias: HU018 (mensajes no leídos). Un mensaje recibido es «no leído» si es posterior a `fecha_ultima_lectura` o si el usuario no tiene fila en esta tabla.
+
+| Columna | Tipo | Nulo | Por defecto | Clave / restricciones | Descripción |
+|---|---|---|---|---|---|
+| `id` | UUID | NO | gen_random_uuid() | PK | Identificador de la marca de lectura. |
+| `id_conversacion` | UUID | NO | — | FK → conversaciones(id) · CASCADE · uq_read_state_conversation_user | Conversación leída. |
+| `id_usuario` | UUID | NO | — | FK → usuarios(id) · CASCADE · uq_read_state_conversation_user | Usuario que lee (debe ser participante: trigger `trg_lectura_participante`). |
+| `fecha_ultima_lectura` | TIMESTAMPTZ | NO | CURRENT_TIMESTAMP | — | Último momento de lectura; solo avanza (trigger `trg_lectura_no_retrocede`). |
+
+- `uq_read_state_conversation_user`: una sola marca por usuario y conversación.
+- Índice `idx_read_states_usuario`: conversaciones leídas por un usuario (la búsqueda por conversación la cubre la restricción UNIQUE).
+- Los nombres de tabla y columnas son los que ya mapea el backend (`ConversationReadStateEntity`).
+
+#### `usuarios_bloqueados`
+
+Bloqueo direccional entre usuarios (Sprint 3). Historias: HU019 (bloquear usuario). `blocker_id` bloquea a `blocked_id`; la restricción de mensajes es mutua.
+
+| Columna | Tipo | Nulo | Por defecto | Clave / restricciones | Descripción |
+|---|---|---|---|---|---|
+| `id` | UUID | NO | gen_random_uuid() | PK | Identificador del bloqueo. |
+| `blocker_id` | UUID | NO | — | FK → usuarios(id) · CASCADE · uq_bloqueo_par | Usuario que bloquea. |
+| `blocked_id` | UUID | NO | — | FK → usuarios(id) · CASCADE · uq_bloqueo_par · chk_bloqueo_no_a_si_mismo | Usuario bloqueado. |
+| `fecha_bloqueo` | TIMESTAMPTZ | NO | CURRENT_TIMESTAMP | — | Instante del bloqueo. |
+
+- `uq_bloqueo_par`: no se puede bloquear dos veces al mismo usuario (el backend responde `BLOQUEO_DUPLICADO`).
+- `chk_bloqueo_no_a_si_mismo`: `blocker_id <> blocked_id` (el backend responde `AUTO_BLOQUEO`).
+- Índice `idx_bloqueos_bloqueado`: quién ha bloqueado a un usuario (la búsqueda por `blocker_id` la cubre `uq_bloqueo_par`).
+- Los nombres son los de `UsuarioBloqueadoEntity` en la rama de HU019 del backend.
+
 ### Integridad referencial
 
 | Tabla hija | Columna | Tabla padre | Cardinalidad | ON DELETE | Justificación |
@@ -583,6 +641,10 @@ Respuestas a un comentario de proyecto, en hilo (máx. 1000 caracteres; Sprint 3
 | `votos_comentario` | `id_usuario` | `usuarios(id)` | 1 a N | CASCADE | El voto no existe sin su comentario ni sin su autor. |
 | `respuestas_comentario` | `id_comentario` | `interaccion_proyecto(id)` | 1 a N | CASCADE | La respuesta no existe sin su comentario ni sin su autor. |
 | `respuestas_comentario` | `id_usuario` | `usuarios(id)` | 1 a N | CASCADE | La respuesta no existe sin su comentario ni sin su autor. |
+| `conversation_read_states` | `id_conversacion` | `conversaciones(id)` | 1 a N | CASCADE | La marca de lectura no existe sin su conversación ni sin su usuario. |
+| `conversation_read_states` | `id_usuario` | `usuarios(id)` | 1 a N | CASCADE | La marca de lectura no existe sin su conversación ni sin su usuario. |
+| `usuarios_bloqueados` | `blocker_id` | `usuarios(id)` | 1 a N | CASCADE | Asociación entre usuarios: se elimina si cualquiera de los dos desaparece. |
+| `usuarios_bloqueados` | `blocked_id` | `usuarios(id)` | 1 a N | CASCADE | Asociación entre usuarios: se elimina si cualquiera de los dos desaparece. |
 
 ### Normalización
 
@@ -605,6 +667,8 @@ Respuestas a un comentario de proyecto, en hilo (máx. 1000 caracteres; Sprint 3
 | `mensajes_privados` | id | id → id_conversacion, remitente_id, destinatario_id, contenido, fecha_envio; (id_conversacion, remitente_id) → destinatario_id | 2FN (dependencia transitiva) | destinatario_id se deduce de la conversación y el remitente: desnormalización controlada (ver «Normalización»). |
 | `votos_comentario` | (id_comentario, id_usuario) | (id_comentario, id_usuario) → fecha_creacion | 3FN / BCNF | La fecha depende de la clave completa (2FN). |
 | `respuestas_comentario` | id | id → id_comentario, id_usuario, respuesta, fecha_creacion | 3FN / BCNF | Respuestas separadas del comentario (1FN). |
+| `conversation_read_states` | id; (id_conversacion, id_usuario) | id → id_conversacion, id_usuario, fecha_ultima_lectura | 3FN / BCNF | Una marca por usuario y conversación; separada de `mensajes_privados` para no repetir la lectura en cada mensaje. |
+| `usuarios_bloqueados` | id; (blocker_id, blocked_id) | id → blocker_id, blocked_id, fecha_bloqueo | 3FN / BCNF | Un bloqueo por pareja y sentido. |
 
 Excepciones documentadas: `perfiles_usuario.nivel_completado` (dato derivado almacenado) y `mensajes_privados.destinatario_id` (dependencia transitiva: se deduce de la conversación y el remitente).
 
@@ -612,14 +676,14 @@ Excepciones documentadas: `perfiles_usuario.nivel_completado` (dato derivado alm
 
 ## 3. Script de estructuras (schema.sql)
 
-`schema.sql` crea la estructura completa sobre una base PostgreSQL **vacía**: 17 tablas, 17 PK, 27 FK, 6 UNIQUE, 20 CHECK y 15 índices, además de 2 triggers y 3 funciones de las historias de usuario (sección 18 del script). Los datos de demostración están en `seed.sql`.
+`schema.sql` crea la estructura completa sobre una base PostgreSQL **vacía**: 19 tablas, 19 PK, 31 FK, 8 UNIQUE, 21 CHECK y 17 índices, además de 5 triggers y 10 funciones de las historias de usuario (secciones 20 y 21 del script). Los datos de demostración están en `seed.sql`.
 
 ### Cómo ejecutarlo
 
 ```bash
 createdb codefactory_s2
 psql -d codefactory_s2 -v ON_ERROR_STOP=1 -f schema.sql         # estructura
-psql -d codefactory_s2 -v ON_ERROR_STOP=1 -f verificacion.sql   # esperado: 17 tablas
+psql -d codefactory_s2 -v ON_ERROR_STOP=1 -f verificacion.sql   # esperado: 19 tablas
 psql -d codefactory_s2 -v ON_ERROR_STOP=1 -f seed.sql           # opcional: datos de prueba
 ```
 
@@ -627,7 +691,7 @@ En pgAdmin: crear la base `codefactory_s2`, abrir **Query Tool**, cargar el arch
 
 ### Orden de creación y dependencias
 
-`usuarios`, `tecnologias` (sin dependencias) → `credenciales`, `perfiles_usuario`, `proyectos`, `discusiones`, `seguidores`, `conversaciones` → `enlaces_externos`, `habilidades`, `proyecto_tecnologias`, `interaccion_discusion`, `interaccion_proyecto`, `likes_proyecto`, `mensajes_privados`, `votos_comentario`, `respuestas_comentario`.
+`usuarios`, `tecnologias` (sin dependencias) → `credenciales`, `perfiles_usuario`, `proyectos`, `discusiones`, `seguidores`, `conversaciones` → `enlaces_externos`, `habilidades`, `proyecto_tecnologias`, `interaccion_discusion`, `interaccion_proyecto`, `likes_proyecto`, `mensajes_privados`, `votos_comentario`, `respuestas_comentario`, `conversation_read_states`, `usuarios_bloqueados`.
 
 ### Cambios del Sprint 2
 
@@ -646,7 +710,7 @@ En pgAdmin: crear la base `codefactory_s2`, abrir **Query Tool**, cargar el arch
 
 ### Triggers y procedimientos (Sprint 3)
 
-Están al final de `schema.sql` (sección 18) y también en `migracion_hu014.sql` para bases ya creadas. Cada objeto atiende una historia de usuario (HU); este apartado cubre la **HU014 (respuesta a comentarios en hilos)** y las demás historias agregan aquí sus objetos.
+Están al final de `schema.sql` (secciones 20 y 21) y también en `migracion_hu014.sql` y `migracion_sprint3.sql` para bases ya creadas. Cada objeto atiende una historia de usuario (HU). Este apartado cubre las cuatro historias del Sprint 3 con objetos en la base: **HU014** (respuesta a comentarios en hilos), **HU018** (mensajes no leídos), **HU019** (bloquear usuario) y **votar comentarios**. En total son 5 triggers y 10 funciones (7 de ellas de HU018, HU019 y votar comentarios).
 
 **Triggers**
 
@@ -654,6 +718,11 @@ Están al final de `schema.sql` (sección 18) y también en `migracion_hu014.sql
 |---|---|---|---|---|---|
 | `trg_respuesta_normaliza` (función `fn_trg_respuesta_normaliza`) | `respuestas_comentario` | INSERT, por fila | BEFORE | Quita los espacios al inicio y al final de la respuesta antes de validarla. Una respuesta en blanco queda vacía y la rechaza el CHECK; el límite de 1000 caracteres se cuenta sobre el texto ya recortado. | HU014, escenarios 4 y 5 |
 | `trg_respuesta_inmutable` (función `fn_trg_respuesta_inmutable`) | `respuestas_comentario` | UPDATE de `id_comentario`, `id_usuario` o `fecha_creacion`, por fila | BEFORE | Impide mover una respuesta a otro comentario o cambiar su autor o su fecha: protege la integridad del hilo. | HU014 |
+| `trg_mensaje_sin_bloqueo` (función `fn_trg_mensaje_sin_bloqueo`) | `mensajes_privados` | INSERT, por fila | BEFORE | Rechaza el mensaje si el remitente bloqueó al destinatario o al revés (restricción mutua). Error `ENVIO_BLOQUEADO`, el mismo código que usa la API. | HU019 |
+| `trg_lectura_participante` (función `fn_trg_lectura_participante`) | `conversation_read_states` | INSERT, por fila | BEFORE | Solo los dos participantes de una conversación pueden tener marca de lectura en ella. | HU018 |
+| `trg_lectura_no_retrocede` (función `fn_trg_lectura_no_retrocede`) | `conversation_read_states` | UPDATE, por fila | BEFORE | La marca `fecha_ultima_lectura` solo avanza (conserva la mayor, como `advanceTo` del backend) y no se puede cambiar la conversación ni el usuario de la fila. | HU018 |
+
+La HU «votar comentarios» no lleva trigger propio: su regla de integridad (un voto por usuario y comentario) la garantiza la clave primaria compuesta de `votos_comentario`, y la lógica de alternar el voto está en la función `fn_alternar_voto_comentario`.
 
 **Procedimientos (funciones almacenadas)**
 
@@ -662,6 +731,13 @@ Están al final de `schema.sql` (sección 18) y también en `migracion_hu014.sql
 | `fn_publicar_respuesta` | `p_id_proyecto`, `p_id_comentario`, `p_id_usuario` (UUID), `p_respuesta` (TEXT) | `id_respuesta`, `total_respuestas` | Valida que el proyecto exista, que el comentario exista y que pertenezca a ese proyecto (la tabla no tiene `id_proyecto`), inserta la respuesta y devuelve el total del hilo. Errores: `PROJECT_NOT_FOUND`, `COMMENT_NOT_FOUND`, `COMMENT_NOT_IN_PROJECT` (mismos códigos que la API). | HU014, escenarios 1, 3 y 8 | `rol_administracion` |
 | `fn_listar_respuestas` | `p_id_comentario` (UUID) | `id`, `id_usuario`, `username`, `respuesta`, `fecha_creacion` | Respuestas de un comentario, de la más antigua a la más reciente. | HU014 (ver el hilo) | `rol_administracion`, `rol_consultas` |
 | `fn_conteo_respuestas_proyecto` | `p_id_proyecto` (UUID) | `id_comentario`, `total_respuestas` | Total de respuestas de cada comentario del proyecto, incluidos los que tienen 0. | HU014 (conteo de respuestas) | `rol_administracion`, `rol_consultas` |
+| `fn_marcar_conversacion_leida` | `p_id_conversacion`, `p_id_usuario` (UUID), `p_fecha` (TIMESTAMPTZ, por omisión ahora) | `TIMESTAMPTZ`: la marca de lectura resultante | Crea la marca de lectura o la avanza (nunca retrocede, por el trigger). Error `CONVERSATION_NOT_FOUND`. | HU018 | `rol_administracion` |
+| `fn_conteo_no_leidos` | `p_id_usuario` (UUID) | `id_conversacion`, `id_otro_usuario`, `no_leidos` | Conversaciones del usuario con sus mensajes recibidos sin leer (posteriores a la última lectura, o todos si nunca la abrió); incluye las de 0. | HU018 | `rol_administracion` |
+| `fn_hay_bloqueo` | `p_usuario_a`, `p_usuario_b` (UUID) | `BOOLEAN` | `TRUE` si alguno bloqueó al otro. La usa el trigger `trg_mensaje_sin_bloqueo`. | HU019 | `rol_administracion` |
+| `fn_bloquear_usuario` | `p_blocker_id`, `p_blocked_id` (UUID) | `UUID`: id del bloqueo | Bloquea a un usuario. Errores: `AUTO_BLOQUEO`, `USUARIO_NO_EXISTE`, `BLOQUEO_DUPLICADO` (mismos códigos que la API). | HU019 | `rol_administracion` |
+| `fn_desbloquear_usuario` | `p_blocker_id`, `p_blocked_id` (UUID) | — | Retira el bloqueo. Error `BLOQUEO_NO_ENCONTRADO` si no existía. | HU019 | `rol_administracion` |
+| `fn_alternar_voto_comentario` | `p_id_proyecto`, `p_id_comentario`, `p_id_usuario` (UUID) | `votado` (BOOLEAN), `total_votos` (BIGINT) | Registra el voto del usuario o lo retira si ya existía, y devuelve el estado y el total. Errores: `PROJECT_NOT_FOUND`, `COMMENT_NOT_FOUND`, `COMMENT_NOT_IN_PROJECT`. | Votar comentarios | `rol_administracion` |
+| `fn_conteo_votos_proyecto` | `p_id_proyecto` (UUID) | `id_comentario`, `total_votos` | Votos de cada comentario del proyecto, incluidos los que tienen 0. | Votar comentarios | `rol_administracion`, `rol_consultas` |
 
 **Ejemplos de llamada** (con `seed.sql` cargado; el comentario «Muy buen proyecto» ya tiene 2 respuestas):
 
@@ -686,16 +762,56 @@ SELECT * FROM fn_publicar_respuesta(gen_random_uuid(), gen_random_uuid(), gen_ra
 -- ERROR:  PROJECT_NOT_FOUND: El proyecto no existe
 ```
 
-**Pruebas:** `verificacion_hu014.sql` (V8 a V17) prueba cada trigger y cada función con datos de ejemplo, incluidos los casos de error; `pruebas_seguridad.sql` (P21 a P25) prueba quién puede ejecutar cada función; `verificacion.sql` (V6 y V7) lista los triggers y las funciones creados.
+**Ejemplos de llamada de HU018, HU019 y votar comentarios** (con `seed.sql` cargado):
 
-**Relación con el backend:** el servicio de administración sigue escribiendo con JPA y valida el proyecto y el comentario en su propio código. Las funciones son la misma regla expresada en la base de datos (con los mismos códigos de error), útil para cargas SQL, scripts y revisiones; el trigger de normalización y el de inmutabilidad sí actúan siempre, venga el dato de donde venga.
+```sql
+-- HU018: mensajes sin leer de cada conversación de PepitoDevPro (devuelve 1)
+SELECT * FROM fn_conteo_no_leidos((SELECT id FROM usuarios WHERE username = 'PepitoDevPro'));
+
+-- HU018: marcar la conversación como leída; después el conteo da 0
+SELECT fn_marcar_conversacion_leida('e0000000-0000-0000-0000-000000000001',
+                                    (SELECT id FROM usuarios WHERE username = 'PepitoDevPro'));
+
+-- HU019: bloquear (devuelve el id del bloqueo) y comprobar el bloqueo en ambos sentidos
+SELECT fn_bloquear_usuario((SELECT id FROM usuarios WHERE username = 'LuisDev'),
+                           (SELECT id FROM usuarios WHERE username = 'MariaTech'));
+SELECT fn_hay_bloqueo((SELECT id FROM usuarios WHERE username = 'MariaTech'),
+                      (SELECT id FROM usuarios WHERE username = 'LuisDev'));   -- true
+
+-- HU019: con bloqueo, enviar un mensaje falla por el trigger
+INSERT INTO mensajes_privados (id_conversacion, remitente_id, destinatario_id, contenido)
+VALUES ('e0000000-0000-0000-0000-000000000002',
+        (SELECT id FROM usuarios WHERE username = 'CarlosBack'),
+        (SELECT id FROM usuarios WHERE username = 'AnaCoder'), 'hola');
+-- ERROR:  ENVIO_BLOQUEADO: No es posible enviar mensajes a este usuario
+
+-- HU019: desbloquear (BLOQUEO_NO_ENCONTRADO si no existía)
+SELECT fn_desbloquear_usuario((SELECT id FROM usuarios WHERE username = 'LuisDev'),
+                              (SELECT id FROM usuarios WHERE username = 'MariaTech'));
+
+-- Votar comentarios: alterna el voto; votado = true y total = 4 la primera vez, false y 3 la segunda
+SELECT * FROM fn_alternar_voto_comentario(
+    (SELECT id_proyecto FROM interaccion_proyecto WHERE comentario = 'Muy buen proyecto'),
+    (SELECT id          FROM interaccion_proyecto WHERE comentario = 'Muy buen proyecto'),
+    (SELECT id          FROM usuarios WHERE username = 'LuisDev'));
+
+-- Votar comentarios: votos por comentario del proyecto (3, 0 y 0)
+SELECT * FROM fn_conteo_votos_proyecto(
+    (SELECT id_proyecto FROM interaccion_proyecto WHERE comentario = 'Muy buen proyecto'));
+```
+
+**Pruebas de HU018, HU019 y votar comentarios:** `verificacion_sprint3.sql` (V18 a V41) prueba cada trigger y cada función con datos del seed, incluidos los casos de error (13 errores a propósito, marcados «DEBE FALLAR»); `pruebas_seguridad.sql` (P26 a P36) prueba quién puede ejecutar cada función y que los triggers funcionan con los permisos reales de `rol_administracion`.
+
+**Pruebas de HU014:** `verificacion_hu014.sql` (V8 a V17) prueba cada trigger y cada función con datos de ejemplo, incluidos los casos de error; `pruebas_seguridad.sql` (P21 a P25) prueba quién puede ejecutar cada función; `verificacion.sql` (V6 y V7) lista los triggers y las funciones creados.
+
+**Relación con el backend:** el servicio de administración sigue escribiendo con JPA y valida el proyecto, el comentario y los bloqueos en su propio código; no llama a estas funciones. Las funciones son la misma regla expresada en la base de datos (con los mismos códigos de error), útil para cargas SQL, scripts y revisiones. Los cinco triggers sí actúan siempre, venga el dato de donde venga (backend, script o consola SQL), así que son una segunda barrera: por ejemplo, aunque el backend olvide consultar el bloqueo, la base rechaza el mensaje.
 
 ### Evidencia de ejecución
 
 <!-- PENDIENTE (Esteban): capturas -->
 <!-- ![schema.sql ejecutado sin errores](docs/img/s2-schema-ok.png) -->
 
-<!-- ![Verificación: 17 tablas y resumen de restricciones](docs/img/s2-verificacion.png) -->
+<!-- ![Verificación: 19 tablas y resumen de restricciones](docs/img/s2-verificacion.png) -->
 
 <!-- ![Diagrama generado por pgAdmin](docs/img/s2-erd.png) -->
 
@@ -904,7 +1020,7 @@ GROUP BY otro.username
 ORDER BY ultimo_mensaje DESC;
 ```
 
-### Consultas complementarias por historia de usuario (C01–C29)
+### Consultas complementarias por historia de usuario (C01–C35)
 
 El texto SQL completo está en `consultas.sql`.
 
@@ -939,6 +1055,12 @@ El texto SQL completo está en `consultas.sql`.
 | C27 | Transversal | 2 | Cuánta actividad tiene cada usuario? (proyectos, discusiones, comentarios, likes dados y seguidores) |
 | C28 | HU014 | 3 | Cuáles son las respuestas de un comentario de proyecto, quién las escribió y cuándo? |
 | C29 | HU014 | 3 | Cuántas respuestas tiene cada comentario de un proyecto (incluidos los que tienen 0)? |
+| C30 | HU018 | 3 | Cuántos mensajes sin leer tiene un usuario en cada una de sus conversaciones (incluidas las que tienen 0)? |
+| C31 | HU018 | 3 | Qué usuarios tienen mensajes recibidos sin leer y cuántos en total? |
+| C32 | HU019 | 3 | A quién ha bloqueado un usuario y desde cuándo? |
+| C33 | HU019 | 3 | Qué parejas de usuarios con conversación no pueden escribirse porque existe un bloqueo en cualquiera de los dos sentidos? |
+| C34 | Votar comentarios | 3 | Cuáles son los comentarios más votados de un proyecto y quién los escribió (incluidos los de 0 votos)? |
+| C35 | Votar comentarios + HU014 | 3 | Cuánta interacción tiene cada comentario de un proyecto (votos y respuestas) para ordenarlos por relevancia? |
 
 <!-- ![Resultado de una consulta en pgAdmin](docs/img/s2-consulta-resultado.png) -->
 
@@ -1052,6 +1174,8 @@ Se usa GRANT/REVOKE con roles de grupo sin LOGIN y usuarios de conexión que her
 | `mensajes_privados` | — | SI | — | S* |
 | `votos_comentario` | — | SID | S | S |
 | `respuestas_comentario` | — | SI | S | S |
+| `conversation_read_states` | — | SIU | — | — |
+| `usuarios_bloqueados` | — | SID | — | — |
 
 **EXECUTE sobre funciones** (PostgreSQL da EXECUTE a PUBLIC por omisión; `schema.sql` lo revoca y `seguridad.sql` lo otorga solo donde hace falta; las funciones se ejecutan con los privilegios de quien las llama, así que cada rol sigue limitado por sus permisos sobre las tablas)
 
@@ -1060,8 +1184,15 @@ Se usa GRANT/REVOKE con roles de grupo sin LOGIN y usuarios de conexión que her
 | `fn_publicar_respuesta` | — | X | — | — |
 | `fn_listar_respuestas` | — | X | X | — |
 | `fn_conteo_respuestas_proyecto` | — | X | X | — |
+| `fn_hay_bloqueo` | — | X | — | — |
+| `fn_marcar_conversacion_leida` | — | X | — | — |
+| `fn_conteo_no_leidos` | — | X | — | — |
+| `fn_bloquear_usuario` | — | X | — | — |
+| `fn_desbloquear_usuario` | — | X | — | — |
+| `fn_alternar_voto_comentario` | — | X | — | — |
+| `fn_conteo_votos_proyecto` | — | X | X | — |
 
-Las funciones de trigger (`fn_trg_respuesta_normaliza`, `fn_trg_respuesta_inmutable`) no son ejecutables por ningún rol: solo las dispara PostgreSQL.
+`rol_administracion` es el único con acceso a `conversation_read_states` y `usuarios_bloqueados`: son datos privados (con quién habla y a quién bloquea cada usuario), así que ni `rol_consultas` ni `rol_analista` los leen. Las funciones de trigger (`fn_trg_respuesta_normaliza`, `fn_trg_respuesta_inmutable`, `fn_trg_mensaje_sin_bloqueo`, `fn_trg_lectura_participante`, `fn_trg_lectura_no_retrocede`) no son ejecutables por ningún rol: solo las dispara PostgreSQL.
 
 Columnas legibles con S\*:
 
@@ -1072,7 +1203,7 @@ Columnas legibles con S\*:
 - `rol_analista` sobre `conversaciones`: id, fecha_creacion
 - `rol_analista` sobre `mensajes_privados`: id, id_conversacion, fecha_envio
 
-Verificación: `verificacion_seguridad.sql` (catálogo: 8 roles, 42 privilegios por tabla, 6 por columna, 0 para PUBLIC, 5 permisos EXECUTE y 0 funciones de las HU ejecutables por PUBLIC) y `pruebas_seguridad.sql` (25 pruebas con `SET ROLE`, permitidas y denegadas). Probado en PostgreSQL 16 local; no probado desde pgAdmin. Sin RLS: las reglas por fila las aplica el backend.
+Verificación: `verificacion_seguridad.sql` (catálogo: 8 roles, 44 privilegios por tabla, 6 por columna, 0 para PUBLIC, 13 permisos EXECUTE y 0 funciones de las HU ejecutables por PUBLIC) y `pruebas_seguridad.sql` (36 pruebas con `SET ROLE`, permitidas y denegadas). Probado en PostgreSQL 16 local; no probado desde pgAdmin. Sin RLS: las reglas por fila las aplica el backend.
 
 ### Qué rol usa la aplicación
 
@@ -1090,6 +1221,7 @@ Ningún servicio debe conectarse con el rol propietario (el que ejecuta `schema.
 <details><summary>Ver el script completo</summary>
 
 ```sql
+
 -- seguridad.sql - Roles y privilegios de CodeF@ctory (Sprint 2)
 -- Ejecutar DESPUES de schema.sql, con el rol propietario de las tablas
 -- (por ejemplo postgres). Se puede ejecutar varias veces.
@@ -1158,6 +1290,8 @@ GRANT SELECT, INSERT, DELETE ON likes_proyecto TO rol_administracion;
 GRANT SELECT, INSERT, DELETE ON votos_comentario TO rol_administracion;
 GRANT SELECT, INSERT ON conversaciones TO rol_administracion;
 GRANT SELECT, INSERT ON mensajes_privados TO rol_administracion;
+GRANT SELECT, INSERT, UPDATE ON conversation_read_states TO rol_administracion;
+GRANT SELECT, INSERT, DELETE ON usuarios_bloqueados TO rol_administracion;
 
 -- rol_consultas
 REVOKE ALL ON ALL TABLES IN SCHEMA public FROM rol_consultas;
@@ -1174,6 +1308,7 @@ GRANT SELECT ON interaccion_proyecto TO rol_consultas;
 GRANT SELECT ON respuestas_comentario TO rol_consultas;
 GRANT SELECT ON seguidores TO rol_consultas;
 GRANT SELECT ON likes_proyecto TO rol_consultas;
+GRANT SELECT ON votos_comentario TO rol_consultas;
 
 -- rol_analista
 REVOKE ALL ON ALL TABLES IN SCHEMA public FROM rol_analista;
@@ -1203,6 +1338,24 @@ GRANT EXECUTE ON FUNCTION fn_publicar_respuesta(UUID, UUID, UUID, TEXT) TO rol_a
 GRANT EXECUTE ON FUNCTION fn_listar_respuestas(UUID) TO rol_administracion, rol_consultas;
 GRANT EXECUTE ON FUNCTION fn_conteo_respuestas_proyecto(UUID) TO rol_administracion, rol_consultas;
 
+-- EXECUTE sobre las funciones de HU018, HU019 y votar comentarios (minimo privilegio):
+--   las que escriben (marcar leida, bloquear, desbloquear, votar) y las de lectura de mensajeria/bloqueos: solo administracion;
+--   el conteo de votos es de lectura publica del feed: administracion y consultas.
+REVOKE ALL ON FUNCTION fn_hay_bloqueo(UUID, UUID) FROM rol_autenticacion, rol_administracion, rol_consultas, rol_analista;
+REVOKE ALL ON FUNCTION fn_marcar_conversacion_leida(UUID, UUID, TIMESTAMP WITH TIME ZONE) FROM rol_autenticacion, rol_administracion, rol_consultas, rol_analista;
+REVOKE ALL ON FUNCTION fn_conteo_no_leidos(UUID) FROM rol_autenticacion, rol_administracion, rol_consultas, rol_analista;
+REVOKE ALL ON FUNCTION fn_bloquear_usuario(UUID, UUID) FROM rol_autenticacion, rol_administracion, rol_consultas, rol_analista;
+REVOKE ALL ON FUNCTION fn_desbloquear_usuario(UUID, UUID) FROM rol_autenticacion, rol_administracion, rol_consultas, rol_analista;
+REVOKE ALL ON FUNCTION fn_alternar_voto_comentario(UUID, UUID, UUID) FROM rol_autenticacion, rol_administracion, rol_consultas, rol_analista;
+REVOKE ALL ON FUNCTION fn_conteo_votos_proyecto(UUID) FROM rol_autenticacion, rol_administracion, rol_consultas, rol_analista;
+GRANT EXECUTE ON FUNCTION fn_hay_bloqueo(UUID, UUID) TO rol_administracion;
+GRANT EXECUTE ON FUNCTION fn_marcar_conversacion_leida(UUID, UUID, TIMESTAMP WITH TIME ZONE) TO rol_administracion;
+GRANT EXECUTE ON FUNCTION fn_conteo_no_leidos(UUID) TO rol_administracion;
+GRANT EXECUTE ON FUNCTION fn_bloquear_usuario(UUID, UUID) TO rol_administracion;
+GRANT EXECUTE ON FUNCTION fn_desbloquear_usuario(UUID, UUID) TO rol_administracion;
+GRANT EXECUTE ON FUNCTION fn_alternar_voto_comentario(UUID, UUID, UUID) TO rol_administracion;
+GRANT EXECUTE ON FUNCTION fn_conteo_votos_proyecto(UUID) TO rol_administracion, rol_consultas;
+
 -- 5. Documentacion en el catalogo
 COMMENT ON ROLE rol_autenticacion  IS 'Servicio de autenticacion: credenciales y lectura minima de usuarios';
 COMMENT ON ROLE rol_administracion IS 'Servicio de administracion: escritura sobre el negocio; sin acceso a credenciales';
@@ -1214,7 +1367,7 @@ COMMENT ON ROLE rol_analista       IS 'Reportes: solo lectura por columnas, sin 
 
 ### Verificación
 
-`verificacion_seguridad.sql` debe devolver: 8 roles (4 de grupo y 4 de conexión), 42 privilegios por tabla, 6 filas de privilegios por columna, 0 permisos para PUBLIC, 5 permisos EXECUTE (S5) y 0 funciones de las HU ejecutables por PUBLIC (S6). `pruebas_seguridad.sql` ejecuta 25 pruebas con `SET ROLE`: nueve permitidas y dieciséis denegadas con `permission denied`.
+`verificacion_seguridad.sql` debe devolver: 8 roles (4 de grupo y 4 de conexión), 44 privilegios por tabla, 6 filas de privilegios por columna, 0 permisos para PUBLIC, 13 permisos EXECUTE (S5) y 0 funciones de las HU ejecutables por PUBLIC (S6). `pruebas_seguridad.sql` ejecuta 36 pruebas con `SET ROLE`: nueve permitidas y dieciséis denegadas con `permission denied`.
 
 <!-- ![Roles y verificación de seguridad](docs/img/s2-roles.png) -->
 
@@ -1237,3 +1390,31 @@ El análisis completo está en [`docs/analisis-almacenamiento.md`](docs/analisis
 - Roles (`seguridad.sql`): rol_administracion SELECT+INSERT; rol_consultas y rol_analista SELECT; sin UPDATE/DELETE. EXECUTE por función: publicar solo administración; listar y contar administración y consultas; ninguna es ejecutable por PUBLIC. `pruebas_seguridad.sql` pasa de 15 a 25 pruebas (P16–P25) y `verificacion_seguridad.sql` agrega S5 y S6.
 - Migración para bases existentes: `migracion_hu014.sql` (crea la tabla, otorga permisos solo si los roles existen y falla si la tabla existe sin su CHECK). Pruebas: `verificacion_hu014.sql` (V1–V17); `verificacion.sql` agrega V6 y V7 para listar triggers y funciones.
 - Contrato con el backend: `respuestas_comentario` no tiene `id_proyecto`, así que la BD no garantiza que el comentario pertenezca al proyecto de la URL; el servicio de administración lo valida (`COMMENT_NOT_IN_PROJECT`, igual que en votos). Las respuestas son de un solo nivel y solo aplican a comentarios de proyecto.
+
+
+### Cambios respecto al Sprint 2 - HU018 (Mensajes no leídos, Sprint 3)
+- MER: nueva entidad CONVERSATION_READ_STATES (1:N con CONVERSACIONES y 1:N con USUARIOS; única por usuario y conversación). Se modela como tabla aparte para no repetir la marca de lectura en cada mensaje ni cambiar `mensajes_privados` de HU017. Se agregó al diagrama de la sección 1, a `docs/MER refinado.md` y a `docs/RELACIONES.md`.
+- Script (`schema.sql`, tabla 18): `conversation_read_states` con UNIQUE `uq_read_state_conversation_user`, FK con ON DELETE CASCADE e índice por usuario. Los nombres de tabla y columnas son los que ya mapea el backend (`ConversationReadStateEntity`, en `main`), para que el esquema de la BD y las entidades coincidan.
+- Triggers (sección 21): `trg_lectura_participante` (BEFORE INSERT) y `trg_lectura_no_retrocede` (BEFORE UPDATE). Funciones: `fn_marcar_conversacion_leida` y `fn_conteo_no_leidos`.
+- Consultas: C30 (no leídos por conversación) y C31 (total de no leídos por usuario). `seed.sql` agrega una marca de lectura para que devuelvan datos.
+- Roles: `rol_administracion` SELECT, INSERT, UPDATE sobre la tabla (el backend la actualiza al leer); sin acceso para `rol_consultas` ni `rol_analista` (dato privado). EXECUTE de las dos funciones solo para administración.
+
+### Cambios respecto al Sprint 2 - HU019 (Bloquear usuario, Sprint 3)
+- MER: nueva entidad USUARIOS_BLOQUEADOS (relación reflexiva usuarios–usuarios, direccional: `blocker_id` bloquea a `blocked_id`). Una tabla asociativa con identificador propio, como lo mapea el backend (`UsuarioBloqueadoEntity`).
+- Script (`schema.sql`, tabla 19): `usuarios_bloqueados` con UNIQUE `uq_bloqueo_par`, CHECK `chk_bloqueo_no_a_si_mismo`, FK con ON DELETE CASCADE e índice por `blocked_id`.
+- Trigger (sección 21): `trg_mensaje_sin_bloqueo` (BEFORE INSERT sobre `mensajes_privados`) impide enviar mensajes cuando hay bloqueo en cualquiera de los dos sentidos: la regla de HU019 queda también en la base. Funciones: `fn_hay_bloqueo`, `fn_bloquear_usuario` y `fn_desbloquear_usuario`.
+- Consultas: C32 (a quién bloqueó un usuario) y C33 (parejas con conversación que no pueden escribirse). `seed.sql` agrega una conversación entre AnaCoder y CarlosBack con un bloqueo.
+- Roles: `rol_administracion` SELECT, INSERT, DELETE sobre la tabla; sin acceso para los demás roles. El trigger usa los permisos de quien inserta el mensaje, por eso `fn_hay_bloqueo` es ejecutable por administración (probado en P26).
+
+### Cambios respecto al Sprint 2 - Votar comentarios (Sprint 3)
+- MER y tabla: sin cambios (`votos_comentario` ya estaba en el esquema de HU014).
+- Funciones (sección 21): `fn_alternar_voto_comentario` (registra o retira el voto, con las mismas validaciones y códigos que la API) y `fn_conteo_votos_proyecto`. No lleva trigger propio: la integridad la dan la clave primaria compuesta y las claves foráneas.
+- Consultas: C34 (comentarios más votados) y C35 (votos y respuestas por comentario). `seed.sql` agrega 4 votos.
+- Roles: el conteo de votos lo ejecutan administración y consultas (lectura del feed); alternar el voto solo administración.
+
+### Resumen de cambios de BD en el Sprint 3 (HU014, HU018, HU019 y votar comentarios)
+- `schema.sql` pasa de 17 a 19 tablas, de 2 a 5 triggers y de 3 a 10 funciones; 31 FK, 21 CHECK, 17 índices.
+- `seguridad.sql`: 2 tablas con permisos mínimos para `rol_administracion` y 8 permisos EXECUTE nuevos (13 en total); `pruebas_seguridad.sql` pasa de 25 a 36 pruebas.
+- `consultas.sql`: C30–C35 nuevas; las consultas de los sprints anteriores se ejecutaron sin cambios sobre el esquema refinado (49 consultas, 0 errores).
+- Migración para bases ya creadas: `migracion_sprint3.sql` (se puede repetir). Pruebas: `verificacion_sprint3.sql` (V18–V41).
+- Contrato con el backend: ninguna función ni trigger exige cambios en los servicios. Los servicios siguen validando con JPA; la base repite las reglas como segunda barrera. La estimación de volumen y almacenamiento (secciones 5 y 7) no incluye todavía `conversation_read_states` ni `usuarios_bloqueados` (crecen como máximo con el número de conversaciones y de bloqueos).

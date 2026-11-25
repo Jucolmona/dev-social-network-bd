@@ -67,6 +67,8 @@ GRANT SELECT, INSERT, DELETE ON likes_proyecto TO rol_administracion;
 GRANT SELECT, INSERT, DELETE ON votos_comentario TO rol_administracion;
 GRANT SELECT, INSERT ON conversaciones TO rol_administracion;
 GRANT SELECT, INSERT ON mensajes_privados TO rol_administracion;
+GRANT SELECT, INSERT, UPDATE ON conversation_read_states TO rol_administracion;
+GRANT SELECT, INSERT, DELETE ON usuarios_bloqueados TO rol_administracion;
 
 -- rol_consultas
 REVOKE ALL ON ALL TABLES IN SCHEMA public FROM rol_consultas;
@@ -112,6 +114,24 @@ REVOKE ALL ON FUNCTION fn_conteo_respuestas_proyecto(UUID) FROM rol_autenticacio
 GRANT EXECUTE ON FUNCTION fn_publicar_respuesta(UUID, UUID, UUID, TEXT) TO rol_administracion;
 GRANT EXECUTE ON FUNCTION fn_listar_respuestas(UUID) TO rol_administracion, rol_consultas;
 GRANT EXECUTE ON FUNCTION fn_conteo_respuestas_proyecto(UUID) TO rol_administracion, rol_consultas;
+
+-- EXECUTE sobre las funciones de HU018, HU019 y votar comentarios (minimo privilegio):
+--   las que escriben (marcar leida, bloquear, desbloquear, votar) y las de lectura de mensajeria/bloqueos: solo administracion;
+--   el conteo de votos es de lectura publica del feed: administracion y consultas.
+REVOKE ALL ON FUNCTION fn_hay_bloqueo(UUID, UUID) FROM rol_autenticacion, rol_administracion, rol_consultas, rol_analista;
+REVOKE ALL ON FUNCTION fn_marcar_conversacion_leida(UUID, UUID, TIMESTAMP WITH TIME ZONE) FROM rol_autenticacion, rol_administracion, rol_consultas, rol_analista;
+REVOKE ALL ON FUNCTION fn_conteo_no_leidos(UUID) FROM rol_autenticacion, rol_administracion, rol_consultas, rol_analista;
+REVOKE ALL ON FUNCTION fn_bloquear_usuario(UUID, UUID) FROM rol_autenticacion, rol_administracion, rol_consultas, rol_analista;
+REVOKE ALL ON FUNCTION fn_desbloquear_usuario(UUID, UUID) FROM rol_autenticacion, rol_administracion, rol_consultas, rol_analista;
+REVOKE ALL ON FUNCTION fn_alternar_voto_comentario(UUID, UUID, UUID) FROM rol_autenticacion, rol_administracion, rol_consultas, rol_analista;
+REVOKE ALL ON FUNCTION fn_conteo_votos_proyecto(UUID) FROM rol_autenticacion, rol_administracion, rol_consultas, rol_analista;
+GRANT EXECUTE ON FUNCTION fn_hay_bloqueo(UUID, UUID) TO rol_administracion;
+GRANT EXECUTE ON FUNCTION fn_marcar_conversacion_leida(UUID, UUID, TIMESTAMP WITH TIME ZONE) TO rol_administracion;
+GRANT EXECUTE ON FUNCTION fn_conteo_no_leidos(UUID) TO rol_administracion;
+GRANT EXECUTE ON FUNCTION fn_bloquear_usuario(UUID, UUID) TO rol_administracion;
+GRANT EXECUTE ON FUNCTION fn_desbloquear_usuario(UUID, UUID) TO rol_administracion;
+GRANT EXECUTE ON FUNCTION fn_alternar_voto_comentario(UUID, UUID, UUID) TO rol_administracion;
+GRANT EXECUTE ON FUNCTION fn_conteo_votos_proyecto(UUID) TO rol_administracion, rol_consultas;
 
 -- 5. Documentacion en el catalogo
 COMMENT ON ROLE rol_autenticacion  IS 'Servicio de autenticacion: credenciales y lectura minima de usuarios';

@@ -51,3 +51,26 @@ SET ROLE svc_consultas; SELECT count(*) AS respuestas FROM fn_listar_respuestas(
 BEGIN; SET ROLE svc_administracion; SELECT total_respuestas FROM fn_publicar_respuesta((SELECT id_proyecto FROM interaccion_proyecto WHERE comentario = 'Muy buen proyecto'), (SELECT id FROM interaccion_proyecto WHERE comentario = 'Muy buen proyecto'), (SELECT id FROM usuarios WHERE username = 'LuisDev'), 'prueba P24'); RESET ROLE; ROLLBACK;
 \echo [P25] analista NO ejecuta fn_conteo_respuestas_proyecto
 SET ROLE usr_analista; SELECT * FROM fn_conteo_respuestas_proyecto(gen_random_uuid()); RESET ROLE;
+
+\echo [P26] administracion SI envia mensajes: el trigger trg_mensaje_sin_bloqueo consulta usuarios_bloqueados con sus permisos (HU019; se deshace)
+BEGIN; SET ROLE svc_administracion; INSERT INTO mensajes_privados (id_conversacion, remitente_id, destinatario_id, contenido) VALUES ('e0000000-0000-0000-0000-000000000001','a0000000-0000-0000-0000-000000000001','a0000000-0000-0000-0000-000000000002','prueba P26'); RESET ROLE; ROLLBACK;
+\echo [P27] administracion SI bloquea con fn_bloquear_usuario (HU019; se deshace)
+BEGIN; SET ROLE svc_administracion; SELECT fn_bloquear_usuario('a0000000-0000-0000-0000-000000000001','a0000000-0000-0000-0000-000000000004') IS NOT NULL AS bloqueado; RESET ROLE; ROLLBACK;
+\echo [P28] consultas NO ejecuta fn_bloquear_usuario (solo lectura)
+SET ROLE svc_consultas; SELECT fn_bloquear_usuario('a0000000-0000-0000-0000-000000000001','a0000000-0000-0000-0000-000000000004'); RESET ROLE;
+\echo [P29] consultas NO lee usuarios_bloqueados (dato privado)
+SET ROLE svc_consultas; SELECT count(*) FROM usuarios_bloqueados; RESET ROLE;
+\echo [P30] analista NO ejecuta fn_conteo_no_leidos (mensajeria es privada)
+SET ROLE usr_analista; SELECT * FROM fn_conteo_no_leidos('a0000000-0000-0000-0000-000000000001'); RESET ROLE;
+\echo [P31] administracion SI ejecuta fn_conteo_no_leidos (HU018)
+SET ROLE svc_administracion; SELECT no_leidos FROM fn_conteo_no_leidos('a0000000-0000-0000-0000-000000000002'); RESET ROLE;
+\echo [P32] administracion SI marca la conversacion como leida: INSERT/UPDATE sobre conversation_read_states (HU018; se deshace)
+BEGIN; SET ROLE svc_administracion; SELECT fn_marcar_conversacion_leida('e0000000-0000-0000-0000-000000000001','a0000000-0000-0000-0000-000000000002') IS NOT NULL AS marcada; RESET ROLE; ROLLBACK;
+\echo [P33] consultas SI ejecuta fn_conteo_votos_proyecto (feed)
+SET ROLE svc_consultas; SELECT sum(total_votos) AS votos FROM fn_conteo_votos_proyecto('c0000000-0000-0000-0000-000000000001'); RESET ROLE;
+\echo [P34] consultas NO ejecuta fn_alternar_voto_comentario (escribe)
+SET ROLE svc_consultas; SELECT * FROM fn_alternar_voto_comentario(gen_random_uuid(), gen_random_uuid(), gen_random_uuid()); RESET ROLE;
+\echo [P35] administracion SI vota con fn_alternar_voto_comentario (se deshace)
+BEGIN; SET ROLE svc_administracion; SELECT total_votos FROM fn_alternar_voto_comentario('c0000000-0000-0000-0000-000000000001', (SELECT id FROM interaccion_proyecto WHERE comentario = 'Muy buen proyecto'), 'a0000000-0000-0000-0000-000000000001'); RESET ROLE; ROLLBACK;
+\echo [P36] administracion NO borra estados de lectura
+SET ROLE svc_administracion; DELETE FROM conversation_read_states; RESET ROLE;

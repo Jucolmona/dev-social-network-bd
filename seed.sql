@@ -126,3 +126,26 @@ INSERT INTO mensajes_privados (id_conversacion, remitente_id, destinatario_id, c
  ('e0000000-0000-0000-0000-000000000001','a0000000-0000-0000-0000-000000000001','a0000000-0000-0000-0000-000000000002','Hola', now() - interval '2 hours'),
  ('e0000000-0000-0000-0000-000000000001','a0000000-0000-0000-0000-000000000002','a0000000-0000-0000-0000-000000000001','¿Colaboramos en el módulo de pagos?', now() - interval '1 hour'),
  ('e0000000-0000-0000-0000-000000000001','a0000000-0000-0000-0000-000000000001','a0000000-0000-0000-0000-000000000002','Claro, ¿tienes tiempo esta semana?', now() - interval '30 minutes');
+
+-- ---- Votos a comentarios (votar comentarios, Sprint 3) -----------------
+INSERT INTO votos_comentario (id_comentario, id_usuario) VALUES
+ ((SELECT id FROM interaccion_proyecto WHERE comentario = 'Muy buen proyecto' ORDER BY fecha_creacion LIMIT 1),'a0000000-0000-0000-0000-000000000002'),
+ ((SELECT id FROM interaccion_proyecto WHERE comentario = 'Muy buen proyecto' ORDER BY fecha_creacion LIMIT 1),'a0000000-0000-0000-0000-000000000003'),
+ ((SELECT id FROM interaccion_proyecto WHERE comentario = 'Muy buen proyecto' ORDER BY fecha_creacion LIMIT 1),'a0000000-0000-0000-0000-000000000004'),
+ ((SELECT id FROM interaccion_proyecto WHERE comentario = 'Buen uso de React' ORDER BY fecha_creacion LIMIT 1),'a0000000-0000-0000-0000-000000000001');
+
+-- ---- Mensajes no leidos (HU018, Sprint 3) -------------------------------
+-- Pepito leyo la conversacion hace 90 minutos: le queda 1 mensaje sin leer (el de hace 30 min).
+-- Luis nunca la abrio (no tiene fila): le queda 1 sin leer (el de hace 1 hora).
+INSERT INTO conversation_read_states (id_conversacion, id_usuario, fecha_ultima_lectura) VALUES
+ ('e0000000-0000-0000-0000-000000000001','a0000000-0000-0000-0000-000000000002', now() - interval '90 minutes');
+
+-- ---- Bloqueos (HU019, Sprint 3) -------------------------------------------
+-- Conversacion Ana(...03) - Carlos(...05) con un mensaje previo; despues Ana bloquea a Carlos.
+-- Los mensajes se insertan ANTES del bloqueo: desde que existe, el trigger impide enviar nuevos.
+INSERT INTO conversaciones (id, id_participante_uno, id_participante_dos) VALUES
+ ('e0000000-0000-0000-0000-000000000002','a0000000-0000-0000-0000-000000000003','a0000000-0000-0000-0000-000000000005');
+INSERT INTO mensajes_privados (id_conversacion, remitente_id, destinatario_id, contenido, fecha_envio) VALUES
+ ('e0000000-0000-0000-0000-000000000002','a0000000-0000-0000-0000-000000000005','a0000000-0000-0000-0000-000000000003','Hola Ana, te escribo por el proyecto', now() - interval '3 days');
+INSERT INTO usuarios_bloqueados (blocker_id, blocked_id, fecha_bloqueo) VALUES
+ ('a0000000-0000-0000-0000-000000000003','a0000000-0000-0000-0000-000000000005', now() - interval '2 days');
